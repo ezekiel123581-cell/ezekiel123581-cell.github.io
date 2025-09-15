@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>드로잉 앱 · 레이어 패널(UI)</title>
+<style>
+  html,body{margin:0;height:100vh;width:100vw;overflow:hidden}
+  #wrap{position:relative;width:100vw;height:100vh}
+  #view{position:absolute;inset:0;background:#fff;touch-action:none;display:block;width:100%;height:100%}
+  /* 상단 도구바 */
+  .toolbar{position:fixed;top:10px;left:10px;z-index:10;background:rgba(255,255,255,.96);padding:8px 10px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.08);font:13px/1.2 system-ui; display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .toolbar .group{display:flex; gap:6px; align-items:center}
+  .toolbar button{margin:0}
+  .small{font-size:12px;opacity:.85}
+  /* 레이어 패널 */
+  #layerPanel{position:fixed;right:10px;top:10px;bottom:10px;width:280px;z-index:11;background:rgba(255,255,255,.96);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.08);display:flex;flex-direction:column}
+  #layerPanel .header{padding:8px 10px;border-bottom:1px solid #e5e7eb;display:flex;gap:6px;align-items:center;justify-content:space-between}
+  #layerPanel .list{overflow:auto;padding:8px}
+  .layer-item{border:1px solid #e5e7eb;border-radius:8px;padding:8px;margin-bottom:8px;background:#fff;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto;grid-column-gap:6px;grid-row-gap:6px}
+  .layer-item.active{outline:2px solid #3b82f6}
+  .icons{display:flex;gap:6px}
+  .icons button{width:28px;height:28px;border-radius:6px}
+  .name-row{display:flex;gap:6px;align-items:center}
+  .name-row input{flex:1 1 auto;padding:4px 6px;border:1px solid #e5e7eb;border-radius:6px}
+  .row{display:flex;gap:6px;align-items:center}
+  .row select,.row input[type="range"]{flex:1}
+  .row .op{width:100%}
+  .layer-actions{display:flex;gap:6px}
+  .log{position:fixed;left:10px;top:66px;z-index:12;font:12px/1.2 ui-monospace,Consolas,monospace;color:#222}
+  .pass{color:#1a7f37}.fail{color:#c62828}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="view"></canvas></div>
+<div class="toolbar">
+  <div class="group">
+    <button data-tool="pencil">연필</button>
+    <button data-tool="brush">붓</button>
+    <button data-tool="eraser">지우개</button>
+  </div>
+  <div class="group">
+    색상 <input id="color" type="color" value="#000000">
+    두께 <input id="size" type="range" min="1" max="40" value="8">
+    <button id="runTests">🧪 테스트</button>
+  </div>
+</div>
+<div id="layerPanel">
+  <div class="header">
+    <div class="row">
+      <button id="addLayer">+ 레이어</button>
+      <button id="addThin">+ 얇은</button>
+    </div>
+    <div class="row">
+      <span class="small">Ctrl: 굵기 ↑</span>
+    </div>
+  </div>
+  <div id="layerList" class="list"></div>
+</div>
+<div id="testlog" class="log"></div>
+<script>
+// === 표시 캔버스 ===
+const view=document.getElementById('view');
+const vctx=view.getContext('2d');
+const dpr=window.devicePixelRatio||1;
+
+// === 레이어 모델 ===
+// L = {canvas, ctx, opacity, visible, locked, blend, name}
+const layers=[]; let active=0; // active: 편집 중 레이어 인덱스(0 = 바닥)
+
+// === 도구 상태 ===
+let tool='brush', color='#000000', size=8, drawing=false, ctrl=false;
+let pts=[]; // 현재 스트로크 포인트 (CSS px)
+
+// === DPR 리사이즈 ===
+function fitCanvas(){
+  const cw=view.clientWidth||window.innerWidth; const ch=view.clientHeight||window.innerHeight;
+  const w=Math.max(1,Math.round(cw*dpr)); const h=Math.max(1,Math.round(ch*dpr));
+  if(view.width!==w||view.height!==h){
+    view.width=w; view.height=h; vctx.setTransform(dpr,0,0,dpr,0,0);
+    for(const L of layers){
+      const old=document.createElement('canvas'); old.width=L.canvas.width; old.height=L.canvas.height;
+      old.getContext('2d').drawImage(L.canvas,0,0);
+      L.canvas.width=w; L.canvas.height=h; L.ctx=L.canvas.getContext('2d');
+      if(old.width&&old.height) L.ctx.drawImage(old,0,0,old.width,old.height,0,0,w,h);
+    }
+    composite();
+  }
+}
+
+function makeLayer({opacity=1, visible=true, locked=false, blend='source-over', name='Layer'}={}){
+  const c=document.createElement('canvas'); c.width=view.width; c.height=view.height;
+  const ctx=c.getContext('2d');
+  return {canvas:c, ctx, opacity, visible, locked, blend, name};
+}
+
+function addInitial(){ if(layers.length) return; layers.push(makeLayer({opacity:1, name:'Layer 0'})); active=0; refreshLayerUI(); composite(); }
+
+// === 합성 ===
+function composite(){
+  vctx.save(); vctx.globalCompositeOperation='source-over'; vctx.globalAlpha=1; vctx.fillStyle='#fff'; vctx.fillRect(0,0,view.width,view.height);
+  for(const L of layers){ if(!L.visible) continue; vctx.globalAlpha=L.opacity; vctx.globalCompositeOperation=L.blend||'source-over'; vctx.drawImage(L.canvas,0,0); }
+  vctx.restore();
+}
+
+// === 상단 도구 ===
+function setTool(t){ tool=t; if(t==='pencil'){ size=Math.min(size,3); document.getElementById('size').value=size; } }
+for(const b of document.querySelectorAll('.toolbar button[data-tool]')) b.addEventListener('click',()=>setTool(b.dataset.tool));
+const colorEl=document.getElementById('color'); const sizeEl=document.getElementById('size');
+colorEl.addEventListener('input',e=>color=e.target.value); sizeEl.addEventListener('input',e=>size=+e.target.value);
+window.addEventListener('keydown',e=>{ if(e.key==='Control') ctrl=true; }); window.addEventListener('keyup',e=>{ if(e.key==='Control') ctrl=false; });
+
+// === 레이어 패널 ===
+const listEl=document.getElementById('layerList');
+const addBtn=document.getElementById('addLayer'); const addThinBtn=document.getElementById('addThin');
+addBtn.addEventListener('click',()=>{ layers.push(makeLayer({opacity:1, name:`Layer ${layers.length}`})); active=layers.length-1; refreshLayerUI(); composite(); });
+addThinBtn.addEventListener('click',()=>{ layers.push(makeLayer({opacity:0.3, name:`Thin ${layers.length}`})); active=layers.length-1; refreshLayerUI(); composite(); });
+
+function refreshLayerUI(){
+  listEl.innerHTML='';
+  // 상단(마지막 인덱스)이 화면에서 위에 보이도록 역순 렌더링
+  for(let i=layers.length-1;i>=0;i--){
+    const L=layers[i];
+    const item=document.createElement('div');
+    item.className='layer-item'+(i===active?' active':'');
+    item.dataset.index=i;
+    item.innerHTML=`
+      <div class="icons" style="grid-column:1/2">
+        <button data-action="toggleVisible" title="가시성">${L.visible?'👁':'🚫👁'}</button>
+        <button data-action="toggleLocked" title="잠금">${L.locked?'🔒':'🔓'}</button>
+      </div>
+      <div class="name-row" style="grid-column:2/3">
+        <input data-action="renameInput" type="text" value="${L.name?.replace(/"/g,'&quot;')||''}" />
+        <button data-action="rename">변경</button>
+      </div>
+      <div class="layer-actions" style="grid-column:3/4">
+        <button data-action="dup" title="복제">⧉</button>
+        <button data-action="del" title="삭제">🗑</button>
+      </div>
+      <div class="row" style="grid-column:1/4">
+        <span class="small">불투명도</span>
+        <input class="op" data-action="opacity" type="range" min="0" max="1" step="0.05" value="${L.opacity}">
+      </div>
+      <div class="row" style="grid-column:1/4">
+        <span class="small">블렌드</span>
+        <select data-action="blend">
+          ${['source-over','multiply','screen','overlay','darken','lighten','hard-light','soft-light'].map(v=>`<option value="${v}" ${L.blend===v?'selected':''}>${v}</option>`).join('')}
+        </select>
+        <button data-action="up" title="위로">⬆︎</button>
+        <button data-action="down" title="아래로">⬇︎</button>
+        <button data-action="activate" title="활성">✔︎</button>
+      </div>`;
+    listEl.appendChild(item);
+  }
+}
+
+// 패널 이벤트 위임
+listEl.addEventListener('click', (e)=>{
+  const btn=e.target.closest('button'); if(!btn) return;
+  const item=e.target.closest('.layer-item'); if(!item) return;
+  const i=+item.dataset.index; const L=layers[i]; if(!L) return;
+  const act=btn.dataset.action;
+  if(act==='toggleVisible'){ L.visible=!L.visible; composite(); refreshLayerUI(); }
+  else if(act==='toggleLocked'){ L.locked=!L.locked; refreshLayerUI(); }
+  else if(act==='dup'){
+    const copy=makeLayer({opacity:L.opacity, visible:L.visible, locked:false, blend:L.blend, name:(L.name||`Layer ${i}`)+' copy'});
+    copy.ctx.drawImage(L.canvas,0,0);
+    layers.splice(i+1,0,copy); active=i+1; refreshLayerUI(); composite();
+  }
+  else if(act==='del'){
+    if(layers.length<=1) return; layers.splice(i,1); active=Math.max(0, Math.min(active, layers.length-1)); refreshLayerUI(); composite();
+  }
+  else if(act==='up'){
+    if(i>=layers.length-1) return; const tmp=layers[i]; layers[i]=layers[i+1]; layers[i+1]=tmp; active=(active===i)?i+1:active; refreshLayerUI(); composite();
+  }
+  else if(act==='down'){
+    if(i<=0) return; const tmp=layers[i]; layers[i]=layers[i-1]; layers[i-1]=tmp; active=(active===i)?i-1:active; refreshLayerUI(); composite();
+  }
+  else if(act==='activate'){ active=i; refreshLayerUI(); }
+  else if(act==='rename'){
+    const input=item.querySelector('input[data-action="renameInput"]'); L.name=input.value||L.name; refreshLayerUI();
+  }
+});
+
+listEl.addEventListener('input',(e)=>{
+  const item=e.target.closest('.layer-item'); if(!item) return; const i=+item.dataset.index; const L=layers[i]; if(!L) return;
+  const act=e.target.dataset.action;
+  if(act==='opacity'){ L.opacity=+e.target.value; composite(); }
+  else if(act==='blend'){ L.blend=e.target.value; composite(); }
+});
+
+// === 샘플링 유틸 (갭 제거) ===
+function strokeLineDense(ctx,a,b,w){
+  ctx.lineWidth=w; // [중요] 실제 선폭 적용
+  const dx=b.x-a.x, dy=b.y-a.y; const len=Math.hypot(dx,dy);
+  const stepLen=Math.max(0.5, w*0.35); const steps=Math.max(1, Math.ceil(len/stepLen));
+  ctx.beginPath(); ctx.moveTo(a.x,a.y);
+  for(let i=1;i<=steps;i++){ const t=i/steps; ctx.lineTo(a.x+dx*t, a.y+dy*t); }
+  ctx.stroke();
+}
+function strokeQuadDense(ctx,p0,p1,p2,w){
+  ctx.lineWidth=w; // [중요] 실제 선폭 적용
+  const m1x=(p0.x+p1.x)/2, m1y=(p0.y+p1.y)/2; const m2x=(p1.x+p2.x)/2, m2y=(p1.y+p2.y)/2;
+  const dx=m2x-m1x, dy=m2y-m1y; const len=Math.hypot(dx,dy);
+  const stepLen=Math.max(0.5, w*0.35); const steps=Math.max(8, Math.ceil(len/stepLen));
+  ctx.beginPath(); ctx.moveTo(m1x,m1y);
+  for(let i=1;i<=steps;i++){
+    const t=i/steps;
+    const qx=(1-t)*(1-t)*m1x + 2*(1-t)*t*p1.x + t*t*m2x;
+    const qy=(1-t)*(1-t)*m1y + 2*(1-t)*t*p1.y + t*t*m2y;
+    ctx.lineTo(qx,qy);
+  }
+  ctx.stroke();
+}
+
+// === 연필 전용: 마지막 세그먼트만 미세 jitter 2패스로 렌더 ===
+function pencilStrokeSegment(ctx, pts, w){
+  const jitter=0.35, passes=2;
+  const n=pts.length; if(n<2) return;
+  for(let pass=0; pass<passes; pass++){
+    const off=()=>({x:(Math.random()-0.5)*jitter, y:(Math.random()-0.5)*jitter});
+    if(n===2){
+      const a=pts[0], b=pts[1];
+      const o1=off(), o2=off();
+      strokeLineDense(ctx,{x:a.x+o1.x,y:a.y+o1.y},{x:b.x+o2.x,y:b.y+o2.y},w);
+    }else{
+      const p0=pts[n-3], p1=pts[n-2], p2=pts[n-1];
+      const o0=off(), o1=off(), o2=off();
+      strokeQuadDense(ctx,
+        {x:p0.x+o0.x,y:p0.y+o0.y},
+        {x:p1.x+o1.x,y:p1.y+o1.y},
+        {x:p2.x+o2.x,y:p2.y+o2.y}, w);
+    }
+  }
+}
+
+// === 드로잉 ===
+function activeCtx(){ return layers[active].ctx; }
+function draw(x,y,start){
+  const L=layers[active]; if(!L || L.locked || !L.visible) return; // 잠금/비가시 레이어 보호
+  const ctx=activeCtx();
+
+  if(tool==='eraser'){
+    const w=size*(ctrl?1.5:1);
+    ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle=color; ctx.globalCompositeOperation='destination-out';
+    if(start||pts.length===0){ pts=[{x,y}]; ctx.beginPath(); ctx.arc(x,y,w/2,0,Math.PI*2); ctx.fill(); composite(); return; }
+    const a=pts[pts.length-1]; const dx=x-a.x, dy=y-a.y; const len=Math.hypot(dx,dy);
+    const stepLen=Math.max(0.5, w*0.4); const steps=Math.max(1, Math.ceil(len/stepLen));
+    for(let i=1;i<=steps;i++){ const t=i/steps; const qx=a.x+dx*t, qy=a.y+dy*t; ctx.beginPath(); ctx.arc(qx,qy,w/2,0,Math.PI*2); ctx.fill(); }
+    pts.push({x,y}); composite(); return;
+  }
+
+  // 공통: 포인트 축적 (시작점은 도트 없이 pts만 세팅)
+  if(start||pts.length===0){ pts=[{x,y}]; return; }
+  const prev=pts[pts.length-1]; const dist=Math.hypot(x-prev.x,y-prev.y); if(dist<0.001){ pts.push({x,y}); return; }
+  pts.push({x,y});
+
+  if(tool==='pencil'){
+    // 연필: 선명(α=1), 얇음(최대 3px), 미세 질감(jitter)
+    const w=Math.max(1, Math.min(size*(ctrl?1.5:1), 3));
+    ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle=color;
+    ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
+    pencilStrokeSegment(ctx, pts, w);
+    composite();
+    return;
+  }
+
+  if(tool==='brush'){
+    // 붓: 살짝 투명 + 속도 기반 굵기 변화 → 부드럽게 번짐
+    let w=size*(ctrl?1.5:1);
+    const a=pts[pts.length-2], b=pts[pts.length-1];
+    const speed=Math.hypot(b.x-a.x, b.y-a.y);
+    const widen=1 + Math.min(speed/28, 0.6);
+    w = Math.max(1, w*widen);
+
+    ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle=color;
+    ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=0.55;
+
+    const n=pts.length;
+    if(n===2) strokeLineDense(ctx,pts[0],pts[1],w);
+    else      strokeQuadDense(ctx,pts[n-3],pts[n-2],pts[n-1],w);
+    composite();
+    return;
+  }
+}
+
+// === 포인터 ===
+function toLocal(e){ const r=view.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+view.addEventListener('pointerdown', e=>{ e.preventDefault(); drawing=true; pts=[]; const p=toLocal(e); try{ view.setPointerCapture && view.setPointerCapture(e.pointerId);}catch(_){} draw(p.x,p.y,true); });
+view.addEventListener('pointermove', e=>{ if(!drawing) return; e.preventDefault(); const p=toLocal(e); draw(p.x,p.y,false); });
+window.addEventListener('pointerup', ()=>{ drawing=false; pts=[]; });
+window.addEventListener('pointercancel', ()=>{ drawing=false; pts=[]; });
+window.addEventListener('resize', fitCanvas);
+
+// === 테스트 (간단) ===
+const testlog=document.getElementById('testlog');
+function log(ok,msg){ const div=document.createElement('div'); div.className=ok?'pass':'fail'; div.textContent=(ok?'✓ ':'✗ ')+msg; testlog.appendChild(div); }
+function runTests(){
+  testlog.innerHTML='';
+  try{ setTool('pencil'); size=2; document.getElementById('size').value=size; log(true,'연필 준비'); }catch(e){ log(false,'연필 준비 실패: '+e.message); }
+  try{ setTool('brush'); size=8; document.getElementById('size').value=size; log(true,'붓 준비'); }catch(e){ log(false,'붓 준비 실패: '+e.message); }
+}
+document.getElementById('runTests').addEventListener('click', runTests);
+
+// === 시작 ===
+addInitial(); fitCanvas();
+</script>
+</body>
+</html>
