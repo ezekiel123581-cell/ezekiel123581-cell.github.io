@@ -5,81 +5,190 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>김은석 · First</title>
   <meta name="description" content="간단한 첫 화면" />
+  <!--
+    ▼▼▼▼▼▼▼▼▼▼▼ 스타일(CSS)은 전부 이 <style> 블록 안에서 관리합니다 ▼▼▼▼▼▼▼▼▼▼▼
+    - 색 테마(변수), 전체 배경, 카드 모양, 버튼 모양, 반응형 그리드가 여기 있습니다.
+  -->
   <style>
-    /* --- 배경 --- */
+    /* ============================== */
+    /* 1) 전역 색상 변수 (:root)      */
+    /*    → 값을 바꾸면 전체 테마 변경 */
+    /* ============================== */
     :root{
-      --bg1:#0f172a; /* 남색 */
-      --bg2:#1e293b; /* 회청 */
-      --card:#0b1220cc; /* 반투명 카드 */
-      --text:#e6edf6;
-      --muted:#9fb0c5;
-      --accent:#7cc4ff;
-      --accent2:#00e0b8;
+      --bg1:#0f172a;  /* 배경 그라디언트 시작색(진한 남색) */
+      --bg2:#1e293b;  /* 배경 그라디언트 끝색(회청) */
+      --card:#0b1220cc; /* 카드 배경(반투명) */
+      --text:#e6edf6;   /* 기본 텍스트 색 */
+      --muted:#9fb0c5;  /* 보조 텍스트 색 */
+      --accent:#7cc4ff; /* (공통 버튼용) 그라디언트 시작 */
+      --accent2:#00e0b8;/* (공통 버튼용) 그라디언트 끝 */
     }
+
+    /* 박스 사이징 통일 및 기본 리셋 */
     *{box-sizing:border-box}
     html,body{height:100%;margin:0}
+
+    /* ============================== */
+    /* 2) 페이지 전체(body)           */
+    /*    → 배경/폰트/가운데정렬      */
+    /* ============================== */
     body{
       font:16px/1.6 system-ui, Segoe UI, Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
       color:var(--text);
-      /* 부드러운 그라디언트 배경 */
+
+      /* ▼ 현재는 '그라디언트 배경'을 사용 중입니다.
+         - 배경을 '이미지'로 바꾸고 싶으면, 아래 3줄(radial 2개 + linear 1개)을
+           주석 처리하고, 바로 다음의 이미지 배경 한 줄을 주석 해제해서 사용하세요.
+      */
       background:
         radial-gradient(60vmax 60vmax at 80% 10%, rgba(124,196,255,.25), transparent 40%),
         radial-gradient(60vmax 60vmax at 0% 90%, rgba(0,224,184,.20), transparent 40%),
         linear-gradient(160deg, var(--bg1), var(--bg2));
+
+      /* 🔄 (선택) 이미지 배경으로 바꾸기: 위 'background:' 3줄을 주석 처리하고 아래 한 줄을 사용
+         - url 경로만 네 이미지 경로로 변경(예: "./bg.jpg" 또는 "/assets/bg.jpg")
+         - cover: 화면 가로세로 비율 유지하며 꽉 채움
+         - center center: 정중앙 정렬
+      */
+      /* background: url("./bg.jpg") no-repeat center center / cover; */
+
       min-height:100%;
-      display:grid;
-      place-items:center;
+      display:grid;          /* 중앙 정렬을 위해 grid 사용 */
+      place-items:center;    /* 가로/세로 중앙 */
       padding:24px;
     }
 
-    /* --- 가운데 카드 --- */
+    /* ============================== */
+    /* 3) 가운데 카드(.card)          */
+    /* ============================== */
     .card{
       width:min(680px, 100%);
       background:var(--card);
       border:1px solid rgba(255,255,255,.08);
       border-radius:20px;
       padding:28px;
-      backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);  /* 유리(블러) 효과 */
       box-shadow: 0 12px 40px rgba(0,0,0,.35);
       text-align:center;
     }
+
+    /* 제목/리드 문구 */
     h1{margin:0 0 8px; font-size:36px; line-height:1.2}
     p.lead{margin:0 0 22px; color:var(--muted)}
+
+    /* ============================== */
+    /* 4) 링크 영역(.links) 그리드     */
+    /* ============================== */
     .links{
-      display:grid; gap:12px;
-      grid-template-columns: repeat(2, minmax(0,1fr));
+      display:grid;
+      gap:12px;
+      grid-template-columns: repeat(2, minmax(0,1fr)); /* 2열 */
     }
-    @media (max-width:560px){ .links{grid-template-columns:1fr} }
+    @media (max-width:560px){
+      .links{grid-template-columns:1fr} /* 좁은 화면에서는 1열 */
+    }
+
+    /* ============================== */
+    /* 5) 공통 버튼 스타일(a.btn)      */
+    /*    - 모양(패딩/둥근모서리/폰트) */
+    /*    - 색상은 아래 '개별 버튼'에서 */
+    /* ============================== */
     a.btn{
-      display:inline-block; padding:12px 16px; border-radius:12px;
-      text-decoration:none; color:#001018; font-weight:700;
+      display:inline-block;
+      padding:12px 16px;
+      border-radius:12px;
+      text-decoration:none;
+      font-weight:700;
+      /* color(글자색)는 개별 버튼에서 상황에 따라 덮어쓸 수 있음 */
+      color:#001018;
+
+      /* (참고) 공통 그라디언트 색: 개별 버튼 클래스를 쓰지 않을 때 적용됨 */
       background:linear-gradient(135deg, var(--accent), var(--accent2));
+
       box-shadow: 0 8px 20px rgba(0,0,0,.25);
+      transition: transform .15s ease, filter .15s ease;
     }
+    a.btn:hover{
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+    }
+
+    /* ========================================= */
+    /* 6) 개별 버튼 색상(여기서 버튼마다 다르게) */
+    /*    - HTML에서 class="btn btn-XXX" 형태로  */
+    /*      붙인 보조 클래스와 연결됩니다.        */
+    /* ========================================= */
+
+    /* GitHub 버튼: 어두운 톤 */
+    .btn-github{
+      background: linear-gradient(135deg, #333333, #555555);
+      color:#ffffff; /* 어두운 배경이므로 흰 글자 */
+    }
+
+    /* 시각예술시뮬레이터 버튼: 청록 계열 */
+    .btn-sim{
+      background: linear-gradient(135deg, #7cc4ff, #00e0b8);
+      color:#001018; /* 밝은 배경이므로 진한 글자 */
+    }
+
+    /* GPTs 버튼: 보라 계열 */
+    .btn-gpt{
+      background: linear-gradient(135deg, #a78bfa, #6366f1);
+      color:#ffffff;
+    }
+
+    /* 프로젝트(준비중) 버튼: 오렌지→레드 */
+    .btn-project{
+      background: linear-gradient(135deg, #f59e0b, #ef4444);
+      color:#ffffff;
+    }
+
+    /* (참고) 과거 'ghost' 버튼: 테두리형(지금은 사용하지 않지만 보관)
+       - 테두리만 있는 버튼을 쓰고 싶을 때 class="ghost" 로 사용
+    */
     a.ghost{
-      display:inline-block; padding:12px 16px; border-radius:12px;
-      text-decoration:none; color:var(--text);
-      background:transparent; border:1px solid rgba(255,255,255,.18);
+      display:inline-block;
+      padding:12px 16px;
+      border-radius:12px;
+      text-decoration:none;
+      color:var(--text);
+      background:transparent;
+      border:1px solid rgba(255,255,255,.18);
     }
+
+    /* 푸터 텍스트 */
     footer{margin-top:16px; color:var(--muted); font-size:14px}
   </style>
+  <!-- ▲▲▲▲▲▲▲▲▲▲▲ 스타일(CSS) 끝 ▲▲▲▲▲▲▲▲▲▲▲ -->
 </head>
 <body>
-  <main class="card">
+  <main class="card"><!-- 중앙 카드 컨테이너 -->
     <h1>안녕하세요, 김은석입니다</h1>
     <p class="lead">작업을 정리한 첫 화면입니다.</p>
 
     <div class="links">
-      <a class="btn"
-   href="https://github.com/ezekiel123581-cell/ezekiel123581-cell.github.io"
-   target="_blank"
-   rel="noopener">GitHub</a>
-      <a class="ghost" href="./simulator.html">시각예술시뮬레이터</a>
-      <a class="ghost" href="https://chatgpt.com/gpts" target="_blank" rel="noopener">GPTs</a>
-      <a class="ghost" href="#" title="나중에 프로젝트 페이지로 연결">프로젝트(준비중)</a>
+      <!--
+        class="btn btn-github" 처럼
+        'btn'(공통) + 'btn-식별자'(개별 색) 두 개를 줍니다.
+        아래 개별 버튼 색상은 <style>의 .btn-github / .btn-sim / .btn-gpt / .btn-project 에서 지정.
+      -->
+      <!-- ⚠️ 공백 누락 주의: class 뒤와 href 사이에 공백 필요 -->
+      <a
+        class="btn btn-github"
+        href="https://github.com/ezekiel123581-cell/ezekiel123581-cell.github.io"
+        target="_blank" rel="noopener"
+      >GitHub</a>
+
+      <a class="btn btn-sim" href="./simulator.html">시각예술시뮬레이터</a>
+
+      <!-- 링크는 원하는 곳으로 교체 가능 -->
+      <a class="btn btn-gpt" href="https://chatgpt.com/gpts" target="_blank" rel="noopener">GPTs</a>
+
+      <a class="btn btn-project" href="#" title="나중에 프로젝트 페이지로 연결">프로젝트(준비중)</a>
     </div>
 
     <footer>© 2025 Eunseok Kim</footer>
   </main>
 </body>
 </html>
+
