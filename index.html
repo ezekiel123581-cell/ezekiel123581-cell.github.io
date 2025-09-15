@@ -8,27 +8,28 @@
   <style>
     :root{
       --bg1:#0f172a; --bg2:#1e293b;
-      --card:#0b1220cc; --text:#e6edf6; --muted:#9fb0c5;
+      --card:#ffffff; --text:#e6edf6; --muted:#9fb0c5;
       --accent:#7cc4ff; --accent2:#00e0b8;
     }
 
     *{box-sizing:border-box}
     html,body{height:100%;margin:0}
 
-    /* ✅ <script>는 스타일 블록 밖으로 빼야 합니다 */
+    /* ===== 페이드 전환용 배경 레이어 ===== */
+    .bg{
+      position:fixed;       /* 화면 전체에 고정 */
+      inset:0;              /* top/right/bottom/left 모두 0 */
+      background-size:cover;
+      background-position:center;
+      opacity:0;            /* 기본은 안 보임 */
+      transition:opacity 2s ease; /* 2초 동안 부드럽게 */
+      z-index:-1;           /* 콘텐츠 뒤로 */
+    }
+    .bg.visible{ opacity:1; } /* 보이게 할 때 */
+
     body{
       font:16px/1.6 system-ui, Segoe UI, Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
       color:var(--text);
-
-      /* 그라디언트 배경(백업용). JS가 로드되기 전 잠깐 보일 수 있음 */
-      background:
-        radial-gradient(60vmax 60vmax at 80% 10%, rgba(124,196,255,.25), transparent 40%),
-        radial-gradient(60vmax 60vmax at 0% 90%, rgba(0,224,184,.20), transparent 40%),
-        linear-gradient(160deg, var(--bg1), var(--bg2));
-      
-      /* ❌ 기존에 주석이 깨져있던 부분 정리 (원하면 이 라인을 실제 이미지로 사용) */
-      /* background: url("./images/bg3.png") no-repeat center center / cover; */
-
       min-height:100%;
       display:grid;
       place-items:center;
@@ -37,7 +38,7 @@
 
     .card{
       width:min(680px, 100%);
-      background:#ffffff;           /* 중앙 카드 흰색 */
+      background:var(--card);        /* 중앙 카드 흰색 */
       border:1px solid rgba(0,0,0,.1);
       border-radius:20px;
       padding:28px;
@@ -68,6 +69,11 @@
   </style>
 </head>
 <body>
+
+  <!-- ✅ 배경 페이드 전환용 레이어 두 개 -->
+  <div class="bg bg1"></div>
+  <div class="bg bg2"></div>
+
   <main class="card">
     <h1>안녕하세요, 김은석입니다</h1>
     <p class="lead">작업을 정리한 첫 화면입니다.</p>
@@ -84,26 +90,41 @@
     <footer>© 2025 Eunseok Kim</footer>
   </main>
 
-  <!-- ✅ JS는 여기(</body> 바로 위)에 있어야 합니다 -->
+  <!-- ✅ 60초마다 배경 이미지를 페이드 전환 -->
   <script>
-    // 60초마다 바꿀 배경 이미지 목록 (raw 주소)
-    const backgrounds = [
+    const images = [
       "https://raw.githubusercontent.com/ezekiel123581-cell/ezekiel123581-cell.github.io/main/images/bg2.png",
       "https://raw.githubusercontent.com/ezekiel123581-cell/ezekiel123581-cell.github.io/main/images/bg3.png",
       "https://raw.githubusercontent.com/ezekiel123581-cell/ezekiel123581-cell.github.io/main/images/bg4.png"
     ];
 
-    let index = 0;
+    let current = 0;
+    const layer1 = document.querySelector('.bg1');
+    const layer2 = document.querySelector('.bg2');
+    let showFirst = true;
 
-    function changeBackground(){
-      document.body.style.background =
-        `url("${backgrounds[index]}") no-repeat center center / cover`;
-      index = (index + 1) % backgrounds.length;
+    function crossFade(){
+      current = (current + 1) % images.length;
+
+      if (showFirst){
+        layer2.style.backgroundImage = `url('${images[current]}')`;
+        layer2.classList.add('visible');
+        layer1.classList.remove('visible');
+      } else {
+        layer1.style.backgroundImage = `url('${images[current]}')`;
+        layer1.classList.add('visible');
+        layer2.classList.remove('visible');
+      }
+      showFirst = !showFirst;
     }
 
-    // 초기 적용 + 주기적 변경
-    changeBackground();
-    setInterval(changeBackground, 60000);
+    // 첫 이미지 표시
+    layer1.style.backgroundImage = `url('${images[0]}')`;
+    layer1.classList.add('visible');
+
+    // 60초마다 페이드 전환 실행
+    setInterval(crossFade, 60000);
   </script>
 </body>
 </html>
+
