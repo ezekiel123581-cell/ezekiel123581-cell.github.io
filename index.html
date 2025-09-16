@@ -1,220 +1,282 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>김은석 · Workspace</title>
-<meta name="description" content="개인 포트폴리오 & 워크스페이스" />
-<style>
-  :root{
-    --bg1:#0f172a; --bg2:#1e293b;
-    --card:#ffffff; --text:#e6edf6; --muted:#9fb0c5;
-    --accent:#7cc4ff; --accent2:#00e0b8;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%}
-  /* 배경 페이드 레이어 */
-  .bg{position:fixed; inset:0; background-size:cover; background-position:center; opacity:0; transition:opacity 2s ease; z-index:-1}
-  .bg.visible{opacity:1}
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>김은석 · Workspace</title>
+  <meta name="description" content="개인 포트폴리오 & 워크스페이스" />
+  <style>
+    :root{
+      /* 색상 테마 변수 */
+      --bg1:#0f172a;      /* 배경 그라디언트 시작색 */
+      --bg2:#1e293b;      /* 배경 그라디언트 끝색   */
+      --card:#ffffff;     /* 카드 기본 배경색       */
+      --text:#e6edf6;     /* 기본 텍스트 색         */
+      --muted:#9fb0c5;    /* 보조 텍스트 색         */
+      --accent:#7cc4ff;   /* 버튼 그라디언트 시작   */
+      --accent2:#00e0b8;  /* 버튼 그라디언트 끝     */
+    }
 
-  body{
-    font:16px/1.6 system-ui, Segoe UI, Roboto, "Apple SD Gothic Neo","Noto Sans KR", sans-serif;
-    color:var(--text);
-    min-height:100%;
-    padding:24px 24px 24px 260px; /* 사이드바 폭만큼 왼쪽 여백 */
-    display:block;
-  }
+    *{box-sizing:border-box;margin:0;padding:0} /* 모든 요소 기본 박스 모델 & 여백 초기화 */
+    html,body{height:100%}
 
-  /* ===== 왼쪽 사이드바 ===== */
-  .sidebar{
-    position:fixed; top:0; left:0; height:100%; width:236px;
-    background:rgba(0,0,0,.35);
-    backdrop-filter:blur(8px);
-    border-right:1px solid rgba(255,255,255,.1);
-    padding:28px 18px;
-    z-index:10;
-  }
-  .sidebar h2{font-size:20px; margin-bottom:18px; color:#fff; opacity:.9}
-  .sidebar nav a{
-    display:block; color:#fff; text-decoration:none; padding:10px 12px; border-radius:10px; margin-bottom:8px; font-weight:700;
-    background:transparent; border:1px solid rgba(255,255,255,.2);
-  }
-  .sidebar nav a:hover{background:rgba(255,255,255,.1)}
+    /* ===== 페이드 전환용 배경 레이어 ===== */
+    .bg{
+      position:fixed;           /* 화면 전체에 고정 */
+      inset:0;                  /* top/right/bottom/left 모두 0 */
+      background-size:cover;    /* 이미지 비율 유지하며 꽉 채움 */
+      background-position:center;
+      opacity:0;                /* 기본은 안 보임 */
+      transition:opacity 2s ease; /* 2초간 부드럽게 투명도 전환 */
+      z-index:-1;               /* 모든 콘텐츠 뒤로 */
+    }
+    .bg.visible{opacity:1;}      /* JS로 visible 클래스가 붙으면 보임 */
 
-  /* ===== 메인 캔버스 (오른쪽) ===== */
-  .canvas{
-    max-width:1280px; margin:0 auto;
-    background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.12);
-    border-radius:22px;
-    padding:22px;
-    box-shadow:0 12px 40px rgba(0,0,0,.25);
-  }
+    body{
+      /* 전체 텍스트/폰트 설정 */
+      font:16px/1.6 system-ui, Segoe UI, Roboto, "Apple SD Gothic Neo","Noto Sans KR", sans-serif;
+      color:var(--text);
 
-  .columns{
-    display:grid; gap:22px;
-    grid-template-columns:58% 42%;
-  }
+      min-height:100%;
+      /* 왼쪽 사이드바 폭(236px) + 여유 padding 포함 */
+      padding:24px 24px 24px 260px;
+    }
 
-  /* 좌측(소개/설명 큰 상자들) */
-  .block{
-    background:#fff; color:#0b1220;
-    border:1px solid rgba(0,0,0,.08);
-    border-radius:18px; padding:22px;
-    box-shadow:0 10px 28px rgba(0,0,0,.15);
-  }
-  .block h3{margin:0 0 10px; font-size:22px}
-  .intro{min-height:180px}
-  .desc{min-height:220px}
+    /* ===== 왼쪽 사이드바 ===== */
+    .sidebar{
+      position:fixed; top:0; left:0; height:100%; width:236px;
+      background:rgba(0,0,0,.35);        /* 반투명 블랙 배경 */
+      backdrop-filter:blur(8px);         /* 블러로 글래스 효과 */
+      border-right:1px solid rgba(255,255,255,.1);
+      padding:28px 18px;
+      z-index:10;                        /* 배경 위, 메인보다 위 */
+    }
+    .sidebar h2{font-size:20px; margin-bottom:14px}
+    .cats{display:flex; flex-direction:column; gap:8px} /* 카테고리 버튼 세로배치 */
+    .cat{
+      display:block; width:100%;
+      color:#fff;
+      background:transparent;
+      border:1px solid rgba(255,255,255,.25);
+      padding:10px 12px; border-radius:10px; font-weight:800;
+      text-align:left; cursor:pointer;
+    }
+    .cat:hover{background:rgba(255,255,255,.08)} /* 호버 시 살짝 하이라이트 */
+    .cat.active{
+      /* 현재 선택된 카테고리 버튼 */
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      color:#001018; border-color:transparent;
+    }
 
-  /* 우측(워크스페이스) */
-  .workspace .head{
-    display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;
-  }
-  .workspace .head h3{margin:0; font-size:20px}
-  .grid{
-    display:grid; gap:14px;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-  }
-  .cardlet{
-    background:#fff; color:#0b1220;
-    border:1px solid rgba(0,0,0,.08);
-    border-radius:14px; padding:16px;
-    min-height:130px; box-shadow:0 8px 20px rgba(0,0,0,.12);
-    cursor:grab;
-  }
-  .cardlet:active{cursor:grabbing}
-  .placeholder{
-    border:2px dashed #94a3b8;
-    background:rgba(148,163,184,.12);
-  }
+    /* ===== 메인 캔버스 (오른쪽 내용 영역) ===== */
+    .canvas{
+      max-width:1280px; margin:0 auto;
+      background:rgba(255,255,255,.06);  /* 살짝 투명 카드 느낌 */
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:22px;
+      padding:22px;
+      box-shadow:0 12px 40px rgba(0,0,0,.25);
+    }
+    /* 좌측(소개/설명) + 우측(워크스페이스) 2단 그리드 */
+    .columns{display:grid; gap:22px; grid-template-columns:58% 42%}
 
-  /* 버튼 스타일 (재사용) */
-  .btn{
-    display:inline-block; padding:10px 14px; border-radius:12px; text-decoration:none; font-weight:800;
-    color:#001018; background:linear-gradient(135deg,var(--accent),var(--accent2));
-    box-shadow:0 8px 20px rgba(0,0,0,.25);
-  }
+    /* 좌측 큰 소개·설명 박스 */
+    .block{
+      background:#fff; color:#0b1220;
+      border:1px solid rgba(0,0,0,.08);
+      border-radius:18px; padding:22px;
+      box-shadow:0 10px 28px rgba(0,0,0,.15);
+    }
+    .block h3{margin:0 0 10px; font-size:22px}
+    .intro{min-height:160px} /* 자기소개 박스 높이 */
+    .desc{min-height:200px}  /* 설명 박스 높이 */
 
-  footer{margin-top:14px; text-align:center; color:var(--muted)}
+    /* 우측 워크스페이스 영역 */
+    .workspace .head{
+      display:flex; align-items:center; justify-content:space-between; margin-bottom:10px
+    }
+    .workspace .head h3{margin:0; font-size:20px}
+    .grid{
+      display:grid; gap:14px;
+      grid-template-columns:repeat(2,minmax(0,1fr)); /* 2열 카드 */
+    }
+    .cardlet{
+      /* 개별 작업 카드 */
+      display:block; text-decoration:none;
+      background:#fff; color:#0b1220;
+      border:1px solid rgba(0,0,0,.08);
+      border-radius:14px; padding:16px;
+      min-height:130px;
+      box-shadow:0 8px 20px rgba(0,0,0,.12);
+      transition:transform .15s, box-shadow .15s;
+    }
+    .cardlet:hover{
+      /* 마우스 올릴 때 살짝 떠오르는 효과 */
+      transform:translateY(-2px);
+      box-shadow:0 12px 28px rgba(0,0,0,.16);
+    }
+    .cardlet h4{margin:0 0 6px; font-size:18px}
+    .cardlet p{margin:0; color:#475569; font-size:14px}
+    .empty{
+      /* 해당 카테고리에 카드가 없을 때 표시 */
+      opacity:.7; text-align:center;
+      padding:30px 10px;
+      border:1px dashed #cbd5e1;
+      border-radius:14px;
+      background:rgba(255,255,255,.6);
+    }
 
-  /* 반응형 */
-  @media (max-width:980px){
-    body{padding-left:220px}
-    .columns{grid-template-columns:1fr}
-  }
-  @media (max-width:640px){
-    body{padding:16px}
-    .sidebar{position:static; width:auto; height:auto; border-right:none; border:1px solid rgba(255,255,255,.12); border-radius:16px; margin-bottom:12px}
-    .columns{grid-template-columns:1fr}
-  }
-</style>
+    footer{margin-top:14px; text-align:center; color:var(--muted)}
+
+    /* 반응형 처리: 폭 좁을 때 한 컬럼으로 전환 */
+    @media (max-width:980px){ .columns{grid-template-columns:1fr} }
+    @media (max-width:640px){
+      body{padding:16px}
+      /* 모바일에서는 사이드바를 위쪽 박스로 바꿈 */
+      .sidebar{
+        position:static; width:auto; height:auto;
+        border-right:none;
+        border:1px solid rgba(255,255,255,.12);
+        border-radius:16px;
+        margin-bottom:12px;
+      }
+      .canvas{padding:16px}
+    }
+  </style>
 </head>
 <body>
 
-<!-- 배경 페이드 -->
+<!-- === 페이드 전환 배경 이미지 2개 (crossfade 용) === -->
 <div class="bg bg1"></div>
 <div class="bg bg2"></div>
 
-<!-- 왼쪽 사이드바 -->
+<!-- === 사이드바: 카테고리 버튼 === -->
 <aside class="sidebar">
-  <h2>사이드바</h2>
-  <nav>
-    <a href="https://github.com/ezekiel123581-cell" target="_blank" rel="noopener">GitHub</a>
-    <a href="./simulator.html">시각예술시뮬레이터</a>
-    <a href="https://chatgpt.com/gpts" target="_blank" rel="noopener">GPTs</a>
-    <a href="#">프로젝트(준비중)</a>
-  </nav>
+  <h2>카테고리</h2>
+  <div class="cats">
+    <!-- data-cat 속성: JS가 필터링할 때 사용 -->
+    <button class="cat active" data-cat="전체">전체</button>
+    <button class="cat" data-cat="게임">게임</button>
+    <button class="cat" data-cat="그림">그림</button>
+    <button class="cat" data-cat="기타">기타</button>
+  </div>
 </aside>
 
-<!-- 오른쪽 메인 캔버스 -->
+<!-- === 메인 콘텐츠 === -->
 <div class="canvas">
   <div class="columns">
-    <!-- 왼쪽 큰 상자들 -->
+    <!-- 왼쪽: 자기소개 & 설명 박스 -->
     <div class="left">
       <section class="block intro">
-        <h3>여기 자기소개</h3>
-        <p>간단한 한 줄 소개를 적어주세요. 예) Unity/3D/AI 실험을 기록하는 김은석입니다.</p>
+        <h3>자기소개</h3>
+        <p>Unity · 3D · AI 실험을 기록하는 김은석입니다.
+           왼쪽 카테고리를 클릭하면 오른쪽에 해당 작업물만 표시됩니다.</p>
       </section>
 
       <section class="block desc" style="margin-top:14px">
         <h3>설명</h3>
-        <p>페이지 구조/목표/업데이트 로그 등 자유롭게 적는 영역.</p>
-        <p style="margin-top:8px"><a class="btn" href="./simulator.html">시뮬레이터 열기</a></p>
+        <p>카테고리를 바꿔도 페이지는 이동하지 않고
+           오른쪽 카드 목록만 바뀝니다.</p>
       </section>
     </div>
 
-    <!-- 오른쪽 워크스페이스 -->
+    <!-- 오른쪽: 워크스페이스 (작업 카드 그리드) -->
     <div class="right workspace">
       <div class="head">
-        <h3>workspace</h3>
-        <small style="color:#cbd5e1">카드를 드래그해서 순서 바꾸기</small>
+        <h3 id="ws-title">workspace · 전체</h3>
+        <small style="color:#cbd5e1">카드를 클릭하면 새 탭으로 이동</small>
       </div>
-
-      <div id="grid" class="grid">
-        <div class="cardlet" draggable="true">작업 A</div>
-        <div class="cardlet" draggable="true">작업 B</div>
-        <div class="cardlet" draggable="true">작업 C</div>
-        <div class="cardlet" draggable="true">작업 D</div>
-      </div>
+      <div id="grid" class="grid"><!-- JS가 여기에 카드 채움 --></div>
     </div>
   </div>
-
   <footer>© 2025 Eunseok Kim</footer>
 </div>
 
-<!-- 스크립트: 배경 페이드 + 드래그 정렬 -->
 <script>
-  // 배경 이미지(같은 도메인 경로 권장)
+  /* ===== 1) 배경 이미지 페이드 전환 ===== */
   const images = ['/images/bg2.png','/images/bg3.png','/images/bg4.png'];
-  let idx = 0; const a = document.querySelector('.bg1'), b = document.querySelector('.bg2'); let first = true;
-  a.style.backgroundImage = `url('${images[0]}')`; a.classList.add('visible');
+  let i = 0; const a = document.querySelector('.bg1'), b = document.querySelector('.bg2'); let first = true;
+  // 첫 번째 이미지를 초기 표시
+  a.style.backgroundImage = `url('${images[0]}')`;
+  a.classList.add('visible');
+  // 60초마다 이미지 교체 + crossfade
   setInterval(()=>{
-    idx = (idx+1)%images.length;
-    if(first){ b.style.backgroundImage=`url('${images[idx]}')`; b.classList.add('visible'); a.classList.remove('visible'); }
-    else     { a.style.backgroundImage=`url('${images[idx]}')`; a.classList.add('visible'); b.classList.remove('visible'); }
+    i = (i+1)%images.length;
+    if(first){
+      b.style.backgroundImage=`url('${images[i]}')`;
+      b.classList.add('visible');
+      a.classList.remove('visible');
+    } else {
+      a.style.backgroundImage=`url('${images[i]}')`;
+      a.classList.add('visible');
+      b.classList.remove('visible');
+    }
     first=!first;
   },60000);
 
-  // 드래그 앤 드롭 재정렬 (순수 JS)
-  const grid = document.getElementById('grid');
-  let draggingEl = null, placeholder = document.createElement('div');
-  placeholder.className = 'cardlet placeholder';
+  /* ===== 2) 작업 카드 데이터 =====
+     - cat : 카테고리 (게임/그림/기타)
+     - href: 카드 클릭 시 열릴 링크
+     - disabled:true 는 준비중(클릭 불가) 표시 */
+  const items = [
+    { title:'GitHub', desc:'소스와 저장소', href:'https://github.com/ezekiel123581-cell', cat:'기타' },
+    { title:'시각예술시뮬레이터', desc:'시각 실험 데모', href:'./simulator.html', cat:'그림' },
+    { title:'GPTs', desc:'커스텀 GPT 모음', href:'https://chatgpt.com/gpts', cat:'기타' },
+    { title:'게임 프로토타입(준비중)', desc:'추가 예정', href:'#', cat:'게임', disabled:true },
+    { title:'드로잉(준비중)', desc:'추가 예정', href:'#', cat:'그림', disabled:true }
+  ];
 
-  grid.addEventListener('dragstart', e=>{
-    if(!e.target.classList.contains('cardlet')) return;
-    draggingEl = e.target;
-    e.dataTransfer.effectAllowed = 'move';
-    setTimeout(()=> draggingEl.style.visibility='hidden', 0);
-  });
+  const grid = document.getElementById('grid');     // 카드가 들어갈 컨테이너
+  const title = document.getElementById('ws-title');// 현재 카테고리 표시 텍스트
 
-  grid.addEventListener('dragend', ()=>{
-    if(draggingEl){ draggingEl.style.visibility='visible'; draggingEl=null; }
-    placeholder.remove();
-  });
+  // 선택된 카테고리(category)에 맞게 카드 목록을 렌더링하는 함수
+  function render(category='전체'){
+    grid.innerHTML = '';
+    // '전체'면 모든 아이템, 아니면 해당 카테고리만
+    const filtered = category==='전체' ? items : items.filter(it => it.cat===category);
 
-  grid.addEventListener('dragover', e=>{
-    e.preventDefault();
-    const after = getAfterElement(grid, e.clientY, e.clientX);
-    if(after == null) grid.appendChild(placeholder);
-    else grid.insertBefore(placeholder, after);
-  });
+    // 카테고리에 아이템이 없을 때
+    if(filtered.length===0){
+      grid.innerHTML = `<div class="empty">이 카테고리에 표시할 작업이 없습니다.</div>`;
+      return;
+    }
 
-  grid.addEventListener('drop', e=>{
-    e.preventDefault();
-    if(!draggingEl) return;
-    if(placeholder.parentNode) grid.insertBefore(draggingEl, placeholder);
-  });
+    // 필터링된 아이템을 카드로 변환
+    filtered.forEach(it=>{
+      const a = document.createElement('a');
+      a.className = 'cardlet';
+      a.innerHTML = `<h4>${it.title}</h4><p>${it.desc}</p>`;
+      if(it.disabled){
+        // 준비중 아이템은 클릭 비활성화
+        a.href = 'javascript:void(0)';
+        a.style.opacity = .6;
+        a.style.pointerEvents = 'none';
+      } else {
+        // 정상 아이템은 새 탭으로 열림
+        a.href = it.href;
+        a.target = '_blank';
+        a.rel = 'noopener';
+      }
+      grid.appendChild(a);
+    });
 
-  function getAfterElement(container, y, x){
-    const els = [...container.querySelectorAll('.cardlet:not(.placeholder):not([style*="visibility: hidden"])')];
-    return els.reduce((closest, child)=>{
-      const rect = child.getBoundingClientRect();
-      const offset = y - rect.top - rect.height/2;
-      if(offset < 0 && offset > closest.offset){ return {offset, element:child}; }
-      else { return closest; }
-    }, {offset: Number.NEGATIVE_INFINITY}).element;
+    // 상단 제목도 현재 카테고리로 업데이트
+    title.textContent = `workspace · ${category}`;
   }
+
+  // 초기에는 '전체' 카테고리로 렌더링
+  render('전체');
+
+  // ===== 3) 사이드바 카테고리 버튼 이벤트 =====
+  document.querySelectorAll('.cat').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      // 모든 버튼에서 active 제거 후 현재만 active
+      document.querySelectorAll('.cat').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      // 버튼의 data-cat 속성 값으로 카드 렌더링
+      render(btn.dataset.cat);
+    });
+  });
 </script>
 </body>
 </html>
