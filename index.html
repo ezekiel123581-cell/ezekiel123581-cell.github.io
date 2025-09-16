@@ -17,15 +17,47 @@
 
     /* ===== 페이드 전환용 배경 레이어 ===== */
     .bg{
-      position:fixed;       /* 화면 전체에 고정 */
-      inset:0;              /* top/right/bottom/left 모두 0 */
+      position:fixed; inset:0;
       background-size:cover;
       background-position:center;
-      opacity:0;            /* 기본은 안 보임 */
-      transition:opacity 2s ease; /* 2초 동안 부드럽게 */
-      z-index:-1;           /* 콘텐츠 뒤로 */
+      opacity:0;
+      transition:opacity 2s ease;
+      z-index:-1;
     }
-    .bg.visible{ opacity:1; } /* 보이게 할 때 */
+    .bg.visible{ opacity:1; }
+
+    /* ===== 왼쪽 사이드바 ===== */   /* ★ 추가 */
+    .sidebar{
+      position:fixed;
+      top:0; left:0;
+      width:220px;
+      height:100%;
+      background:rgba(0,0,0,.35);
+      backdrop-filter:blur(8px);
+      border-right:1px solid rgba(255,255,255,.1);
+      padding:32px 20px;
+      z-index:10;
+    }
+    .sidebar h2{
+      margin:0 0 24px;
+      font-size:22px;
+      color:var(--text);
+    }
+    .sidebar nav a{
+      display:block;
+      margin-bottom:16px;
+      color:var(--text);
+      text-decoration:none;
+      font-weight:600;
+      padding:6px 8px;
+      border-radius:6px;
+      transition:background .2s;
+    }
+    .sidebar nav a:hover,
+    .sidebar nav a:focus-visible{
+      background:rgba(255,255,255,.08);
+      outline:none;
+    }
 
     body{
       font:16px/1.6 system-ui, Segoe UI, Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
@@ -34,11 +66,12 @@
       display:grid;
       place-items:center;
       padding:24px;
+      padding-left:220px;   /* ★ 사이드바 폭만큼 오른쪽으로 밀어줌 */
     }
 
     .card{
       width:min(680px, 100%);
-      background:var(--card);        /* 중앙 카드 흰색 */
+      background:var(--card);
       border:1px solid rgba(0,0,0,.1);
       border-radius:20px;
       padding:28px;
@@ -74,6 +107,17 @@
   <div class="bg bg1"></div>
   <div class="bg bg2"></div>
 
+  <!-- ▼ 왼쪽 사이드바 (★ 추가) -->
+  <aside class="sidebar">
+    <h2>MENU</h2>
+    <nav>
+      <a href="https://github.com/ezekiel123581-cell" target="_blank" rel="noopener">GitHub</a>
+      <a href="./simulator.html">시각예술시뮬레이터</a>
+      <a href="https://chatgpt.com/gpts" target="_blank" rel="noopener">GPTs</a>
+      <a href="#">프로젝트(준비중)</a>
+    </nav>
+  </aside>
+
   <main class="card">
     <h1>안녕하세요, 김은석입니다</h1>
     <p class="lead">작업을 정리한 첫 화면입니다.</p>
@@ -89,23 +133,23 @@
 
     <footer>© 2025 Eunseok Kim</footer>
   </main>
-  <!-- 예: 아래 패널 섹션 -->
-<section class="front-panels">
-  <article class="panel">
-    <h3>최근 프로젝트</h3>
-    <p>프로젝트 간단 소개…</p>
-  </article>
-  <article class="panel">
-    <h3>3D 모델링</h3>
-    <p>3ds Max, Unity 머티리얼 작업 등…</p>
-  </article>
-</section>
 
-<!-- 필요하면 두 번째 줄 -->
-<section class="front-panels row2">
-  <article class="panel">…</article>
-  <article class="panel">…</article>
-</section>
+  <!-- 예: 아래 패널 섹션 -->
+  <section class="front-panels">
+    <article class="panel">
+      <h3>최근 프로젝트</h3>
+      <p>프로젝트 간단 소개…</p>
+    </article>
+    <article class="panel">
+      <h3>3D 모델링</h3>
+      <p>3ds Max, Unity 머티리얼 작업 등…</p>
+    </article>
+  </section>
+
+  <section class="front-panels row2">
+    <article class="panel">…</article>
+    <article class="panel">…</article>
+  </section>
 
   <!-- ✅ 60초마다 배경 이미지를 페이드 전환 -->
   <script>
@@ -135,13 +179,12 @@
       showFirst = !showFirst;
     }
 
-    // 첫 이미지 표시
     layer1.style.backgroundImage = `url('${images[0]}')`;
     layer1.classList.add('visible');
 
-    // 60초마다 페이드 전환 실행
     setInterval(crossFade, 60000);
   </script>
 </body>
 </html>
+
 
