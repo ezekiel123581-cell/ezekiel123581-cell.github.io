@@ -34,6 +34,13 @@
     footer.small { font-size: 11px; color: #64748b; margin-top: 10px; }
     input[type="file"] { display: none; }
     .toggle { display: inline-flex; align-items: center; gap: 6px; }
+    .field { display:flex; align-items:center; gap:8px; font-size:12px; }
+    .field input[type="range"]{ width:160px; }
+    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:6px; }
+    .numrow{ display:grid; grid-template-columns: auto 1fr; gap:6px; align-items:center; }
+    .numrow input{ width:100%; padding:6px 8px; border:1px solid #e5e7eb; border-radius:8px; font-size:12px; }
+    .select{ width:100%; padding:6px 8px; border:1px solid #e5e7eb; border-radius:8px; font-size:12px; background:#fff; }
+    .smallnote{ font-size:11px; color:#64748b; }
   </style>
   <!-- three.js r147 UMD & helpers -->
   <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
@@ -41,6 +48,7 @@
   <script src="https://unpkg.com/three@0.147.0/examples/js/controls/TransformControls.js"></script>
   <script src="https://unpkg.com/three@0.147.0/examples/js/controls/DragControls.js"></script>
   <script src="https://unpkg.com/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://unpkg.com/three@0.147.0/examples/js/loaders/RGBELoader.js"></script>
 </head>
 <body>
   <div id="app">
@@ -64,7 +72,7 @@
           <input id="gltfFile" type="file" accept=".gltf,.glb" />
         </div>
         <div class="tip">
-          개체를 클릭하면 <b>변형기(TransformControls)</b>가 붙습니다. <span class="kbd">W</span>/<span class="kbd">E</span>/<span class="kbd">R</span> 이동/회전/스케일, <span class="kbd">Delete</span> 삭제.
+          개체를 클릭하면 <b>변형기(TransformControls)</b>가 붙습니다. <span class="kbd">W</span>/<span class="kbd">E</span>/<span class="kbd">R</span> 이동/회전/스케일, <span class="kbd">Q</span> 축모드, <span class="kbd">Delete</span> 삭제.
         </div>
 
         <h2>보조도구</h2>
@@ -73,6 +81,74 @@
           <label class="toggle"><input id="toggleAxes" type="checkbox" checked /> 축</label>
           <label class="toggle"><input id="toggleSnap" type="checkbox" /> 스냅(1단위)</label>
           <label class="toggle"><input id="toggleDrag" type="checkbox" /> 드래그 이동 모드</label>
+        </div>
+
+        <h2>조명 & 환경</h2>
+        <div class="row">
+          <label class="toggle"><input id="toggleDir" type="checkbox" checked /> 직사광(키라이트)</label>
+          <label class="toggle"><input id="toggleHemi" type="checkbox" checked /> 헤미라이트</label>
+          <label class="toggle"><input id="toggleIBL" type="checkbox" /> 환경맵(IBL)</label>
+          <label class="toggle"><input id="toggleSpot" type="checkbox" checked /> 스팟라이트</label>
+          <label class="toggle"><input id="toggleRim" type="checkbox" checked /> 림 라이트</label>
+          <label class="toggle"><input id="togglePoint" type="checkbox" checked /> 포인트(회전)</label>
+        </div>
+        <div class="field">
+          <span>노출</span>
+          <input id="exposure" type="range" min="0.3" max="2.2" step="0.05" value="1.0" />
+          <span id="exposureVal" class="muted">1.0</span>
+        </div>
+
+        <!-- 조명 편집 -->
+        <h2>조명 편집</h2>
+        <div class="stack">
+          <select id="lightPick" class="select">
+            <option value="dir">Directional (키)</option>
+            <option value="spot">Spot</option>
+            <option value="rim">Directional (림)</option>
+            <option value="point">Point</option>
+          </select>
+          <label class="toggle"><input id="editTarget" type="checkbox" /> 타겟 편집(Spot/Directional)</label>
+
+          <div class="grid2">
+            <div class="numrow"><span>X</span><input id="lx" type="number" step="0.1"></div>
+            <div class="numrow"><span>Y</span><input id="ly" type="number" step="0.1"></div>
+            <div class="numrow"><span>Z</span><input id="lz" type="number" step="0.1"></div>
+            <button id="focusLight" class="btn">카메라 포커스</button>
+          </div>
+
+          <div class="grid2">
+            <div class="numrow"><span>강도</span><input id="lint" type="number" step="0.1" min="0" value="1.0"></div>
+            <div class="numrow" id="spotOnly"><span>스팟 각도(°)</span><input id="langle" type="number" step="1" min="5" max="80" value="35"></div>
+          </div>
+          <div class="smallnote">라이트 선택 후 값을 바꾸거나, 장면에서 기즈모로 직접 드래그하세요.</div>
+        </div>
+
+        <!-- 스팟 쿠키(패턴) 추가 -->
+        <h2>스팟 쿠키(패턴)</h2>
+        <div class="stack">
+          <label class="toggle"><input id="cookieOn" type="checkbox" checked /> 쿠키 사용</label>
+          <div class="grid2">
+            <div class="numrow">
+              <span>패턴</span>
+              <select id="cookieType" class="select">
+                <option value="circle">동그라미</option>
+                <option value="ring">도넛(링)</option>
+                <option value="stripes">줄무늬</option>
+                <option value="image">이미지</option>
+              </select>
+            </div>
+            <div class="numrow"><span>회전(°)</span><input id="cookieRot" type="number" step="1" value="0"></div>
+            <div class="numrow"><span>부드러움</span><input id="cookieSoft" type="number" step="0.05" value="0.35" min="0" max="0.95"></div>
+            <div class="numrow" id="cookieRingRow"><span>내부반경</span><input id="cookieInner" type="number" step="0.05" value="0.4" min="0" max="0.95"></div>
+            <div class="numrow" id="cookieStripeRow"><span>줄 개수</span><input id="cookieStripes" type="number" step="1" value="6" min="2" max="64"></div>
+            <div class="numrow"><span>반전</span><input id="cookieInvert" type="checkbox"></div>
+          </div>
+          <div class="row">
+            <label class="btn" for="cookieImg">이미지 선택</label>
+            <input id="cookieImg" type="file" accept="image/*">
+            <button id="cookieReset" class="btn">기본(동그라미)</button>
+          </div>
+          <div class="smallnote">밝은 부분이 비추는 영역입니다. (쿠키=스팟 프로젝션 마스크)</div>
         </div>
 
         <h2>배치 유틸</h2>
@@ -97,9 +173,7 @@
           <label class="btn" for="importJson">가져오기(JSON)</label>
           <input id="importJson" type="file" accept=".json" />
         </div>
-        <div class="tip">
-          순서대로 X축에 자동 배치하려면 “제작순서로 가로 정렬”을 누르세요.
-        </div>
+        <div class="tip">순서대로 X축에 자동 배치하려면 “제작순서로 가로 정렬”을 누르세요.</div>
         <h2>선택 정보</h2>
         <div id="selInfo" class="muted">선택된 개체가 없습니다.</div>
         <h2>단축키</h2>
@@ -116,7 +190,12 @@
     const WRAP = document.getElementById('canvasWrap');
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
     WRAP.appendChild(renderer.domElement);
+
     function fitRenderer(){
       const w = WRAP.clientWidth || window.innerWidth;
       const h = WRAP.clientHeight || (window.innerHeight - 60);
@@ -124,7 +203,8 @@
     }
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf8fafc);
+    const DEFAULT_BG = new THREE.Color(0xf8fafc); // 기본 배경색
+    scene.background = DEFAULT_BG;
 
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 2000);
     camera.position.set(6, 6, 12);
@@ -132,40 +212,108 @@
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
-    // 라이트
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x334155, 0.6); scene.add(hemi);
-    const dir = new THREE.DirectionalLight(0xffffff, 0.9); dir.position.set(5,10,7); dir.castShadow = true; scene.add(dir);
+    // ===== 라이트 =====
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x334155, 0.5);
+    scene.add(hemi);
 
-    // 그리드/축
-    const grid = new THREE.GridHelper(50, 50, 0x94a3b8, 0xcbd5e1); scene.add(grid);
-    const axes = new THREE.AxesHelper(2); scene.add(axes);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+    dir.position.set(5,10,7);
+    dir.castShadow = true;
+    dir.shadow.mapSize.set(2048, 2048);
+    dir.shadow.camera.near = 0.5;
+    dir.shadow.camera.far = 50;
+    dir.shadow.radius = 2.5;
+    scene.add(dir);
 
-    // 컨트롤러
+    const spot = new THREE.SpotLight(0xffffff, 1.1, 40, THREE.MathUtils.degToRad(35), 0.35, 1.5);
+    spot.position.set(6, 9, 3);
+    spot.target.position.set(0, 0, 0);
+    spot.castShadow = true;
+    spot.shadow.mapSize.set(1024,1024);
+    scene.add(spot, spot.target);
+
+    const rim = new THREE.DirectionalLight(0x9ecfff, 0.6);
+    rim.position.set(-6, 4, -6);
+    scene.add(rim);
+
+    const point = new THREE.PointLight(0xfff2cc, 0.8, 30, 2.0);
+    point.position.set(0, 3, 6);
+    point.castShadow = true;
+    scene.add(point);
+
+    const pointViz = new THREE.Mesh(
+      new THREE.SphereGeometry(0.07, 16, 12),
+      new THREE.MeshBasicMaterial({ color: 0xffc107 })
+    );
+    point.add(pointViz);
+
+    // ===== 그리드/축 =====
+    const grid = new THREE.GridHelper(50, 50, 0x94a3b8, 0xcbd5e1);
+    scene.add(grid);
+    const axes = new THREE.AxesHelper(2);
+    scene.add(axes);
+
+    // ===== 컨트롤러/로더 =====
     const tctrl = new THREE.TransformControls(camera, renderer.domElement);
     tctrl.addEventListener('dragging-changed', (e)=>{ controls.enabled = !e.value; });
     scene.add(tctrl);
 
-    // 로더
     const loader = new THREE.GLTFLoader();
 
-    // 피킹
+    // ===== IBL(HDR) =====
+    let iblTexture = null;
+    const rgbeLoader = new THREE.RGBELoader();
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    pmrem.compileEquirectangularShader();
+
+    function enableIBL(on){
+      if(on){
+        if(iblTexture){
+          scene.environment = iblTexture;
+          return;
+        }
+        rgbeLoader.setDataType(THREE.UnsignedByteType)
+          .load('https://threejs.org/examples/textures/equirectangular/royal_esplanade_1k.hdr',
+            (hdr)=>{
+              iblTexture = pmrem.fromEquirectangular(hdr).texture;
+              hdr.dispose && hdr.dispose();
+              scene.environment = iblTexture;
+              updateBlackout();
+            },
+            undefined,
+            (err)=>{ console.warn('HDR 로드 실패:', err); }
+          );
+      } else {
+        scene.environment = null;
+      }
+    }
+
+    // ===== 피킹/상태 =====
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
-    // 상태
-    let selected = null;
+    let selected = null;           // 장면 오브젝트 선택
+    let selectedLightObj = null;   // 라이트(또는 타겟) 편집용 선택
     let idCounter = 1; 
-    const dragTargets = []; // 드래그 가능한 대상들
+    const dragTargets = [];
     let dragControls = null;
     let dragging = false;
 
-    const paletteBtns = document.querySelectorAll('[data-primitive]');
     const seqList = document.getElementById('sequence');
     const selInfo = document.getElementById('selInfo');
 
-    // === 유틸 ===
+    // ===== 유틸 =====
     function addToScene(obj, label){
-      obj.traverse?.(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      obj.traverse?.(o => {
+        if (o.isMesh) {
+          o.castShadow = true;
+          o.receiveShadow = true;
+          if (o.material && o.material.isMeshStandardMaterial) {
+            o.material.metalness ??= 0.1;
+            o.material.roughness ??= 0.8;
+          }
+        }
+      });
       obj.userData.__id = idCounter++;
       obj.userData.label = label || obj.type;
       obj.userData.step = seqList.children.length;
@@ -177,11 +325,19 @@
     }
 
     function createPrimitive(kind){
-      let mesh; const mat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.1, roughness: 0.8 });
-      if (kind === 'Box') mesh = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat);
-      if (kind === 'Sphere') mesh = new THREE.Mesh(new THREE.SphereGeometry(0.6, 32, 16), mat);
-      if (kind === 'Cylinder') mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,1, 24), mat);
-      if (kind === 'Plane') { mesh = new THREE.Mesh(new THREE.PlaneGeometry(12,12), new THREE.MeshStandardMaterial({ color: 0xe2e8f0, side: THREE.DoubleSide })); mesh.rotation.x = -Math.PI/2; mesh.receiveShadow = true; }
+      const primMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.15, roughness: 0.55 });
+      let mesh;
+      if (kind === 'Box') mesh = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), primMat);
+      if (kind === 'Sphere') mesh = new THREE.Mesh(new THREE.SphereGeometry(0.6, 32, 16), primMat);
+      if (kind === 'Cylinder') mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,1, 24), primMat);
+      if (kind === 'Plane') {
+        mesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(12,12),
+          new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.95, metalness: 0.0, side: THREE.DoubleSide })
+        );
+        mesh.rotation.x = -Math.PI/2;
+        mesh.receiveShadow = true;
+      }
       mesh.position.set((Math.random()-0.5)*4, kind==='Plane'?0:0.5, (Math.random()-0.5)*4);
       addToScene(mesh, kind);
     }
@@ -194,14 +350,127 @@
       }, undefined, (err)=>{ alert('GLTF 로드 실패: '+err.message); });
     }
 
+    function findObjectById(id){ return scene.children.find(o => o.userData && o.userData.__id === id) || null; }
+
     function selectObject(obj){
       selected = obj; tctrl.detach();
+      selectedLightObj = null; // 라이트 편집 중지
       if (obj) { tctrl.attach(obj); updateSelInfo(); updateSequenceUI(); }
       else { selInfo.textContent = '선택된 개체가 없습니다.'; updateSequenceUI(); }
     }
 
+    // ---- 라이트 편집: UI ----
+    const lightPick = document.getElementById('lightPick');
+    const editTarget = document.getElementById('editTarget');
+    const liX = document.getElementById('lx');
+    const liY = document.getElementById('ly');
+    const liZ = document.getElementById('lz');
+    const lInt = document.getElementById('lint');
+    const lAngle = document.getElementById('langle');
+    const spotOnly = document.getElementById('spotOnly');
+    const focusLightBtn = document.getElementById('focusLight');
+
+    function currentLight(){
+      const key = lightPick.value;
+      const light = (key==='dir')?dir : (key==='spot')?spot : (key==='rim')?rim : point;
+      if (editTarget.checked && (key==='dir' || key==='spot')) {
+        return light.target;
+      }
+      return light;
+    }
+
+    function syncLightUIFromObject(obj){
+      const p = obj.position;
+      liX.value = p.x.toFixed(2);
+      liY.value = p.y.toFixed(2);
+      liZ.value = p.z.toFixed(2);
+
+      const key = lightPick.value;
+      const light = (key==='dir')?dir : (key==='spot')?spot : (key==='rim')?rim : point;
+      lInt.value = (light.intensity ?? 1).toFixed(2);
+      spotOnly.style.display = (key==='spot') ? '' : 'none';
+      if (key==='spot') {
+        lAngle.value = Math.round(THREE.MathUtils.radToDeg(spot.angle));
+      }
+    }
+
+    function attachLightTransform(obj){
+      // 오브젝트 선택 해제하고 라이트에 트랜스폼 부착
+      selected = null; updateSequenceUI();
+      tctrl.detach();
+      tctrl.attach(obj);
+      selectedLightObj = obj;
+      updateSelInfo();
+    }
+
+    function updateLightFromInputs(){
+      const obj = currentLight();
+      const nx = parseFloat(liX.value)||0;
+      const ny = parseFloat(liY.value)||0;
+      const nz = parseFloat(liZ.value)||0;
+      obj.position.set(nx, ny, nz);
+      const key = lightPick.value;
+      const light = (key==='dir')?dir : (key==='spot')?spot : (key==='rim')?rim : point;
+      light.intensity = Math.max(0, parseFloat(lInt.value)||0);
+      if (key==='spot') {
+        const deg = Math.min(80, Math.max(5, parseFloat(lAngle.value)||35));
+        spot.angle = THREE.MathUtils.degToRad(deg);
+      }
+      // 스팟/디렉셔널은 target 이동 후 행렬 업데이트
+      if (obj === spot.target || obj === dir.target) {
+        obj.updateMatrixWorld();
+      }
+    }
+
+    function focusCameraTo(obj){
+      controls.target.copy(obj.position);
+      camera.position.set(obj.position.x + 6, obj.position.y + 6, obj.position.z + 12);
+    }
+
+    lightPick.addEventListener('change', ()=>{
+      const obj = currentLight();
+      attachLightTransform(obj);
+      syncLightUIFromObject(obj);
+    });
+    editTarget.addEventListener('change', ()=>{
+      const obj = currentLight();
+      attachLightTransform(obj);
+      syncLightUIFromObject(obj);
+    });
+
+    [liX, liY, liZ, lInt, lAngle].forEach(el=>{
+      el.addEventListener('input', ()=>{
+        updateLightFromInputs();
+      });
+      el.addEventListener('change', ()=>{
+        updateLightFromInputs();
+      });
+    });
+
+    focusLightBtn.addEventListener('click', ()=>{
+      focusCameraTo(currentLight());
+    });
+
+    // tctrl 변경 시 숫자 입력 갱신
+    tctrl.addEventListener('change', ()=>{
+      if (selectedLightObj) {
+        syncLightUIFromObject(selectedLightObj);
+      }
+      updateSelInfo();
+    });
+
+    // ---- 선택 정보 표시(라이트도 지원) ----
     function updateSelInfo(){
-      if (!selected) return; const p=selected.position, r=selected.rotation, s=selected.scale;
+      if (selectedLightObj) {
+        const p=selectedLightObj.position;
+        const who = (selectedLightObj===spot.target||selectedLightObj===dir.target)? 'Light Target' : 'Light';
+        selInfo.innerHTML = `<div><b>${who}</b> (${lightPick.value}${selectedLightObj===spot.target?' target':''}${selectedLightObj===dir.target?' target':''})</div>
+          <div>pos: ${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)}</div>
+          <div class="muted">W/E/R 이동·회전·스케일, Q 축모드</div>`;
+        return;
+      }
+      if (!selected) return;
+      const p=selected.position, r=selected.rotation, s=selected.scale;
       selInfo.innerHTML = `<div><b>${selected.userData.label}</b> (#${selected.userData.__id})</div>
       <div class="muted">step: ${selected.userData.step}</div>
       <div>pos: ${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)}</div>
@@ -219,8 +488,6 @@
       el.querySelector('.del').addEventListener('click',(e)=>{ e.stopPropagation(); deleteObject(obj); });
       seqList.appendChild(el); renumberSteps();
     }
-
-    function findObjectById(id){ return scene.children.find(o => o.userData && o.userData.__id === id) || null; }
 
     function moveStep(obj, delta){
       const items=[...seqList.children]; const idx=items.findIndex(el=>+el.dataset.id===obj.userData.__id);
@@ -249,35 +516,76 @@
     function refreshDragControls(){ if (dragControls){ dragControls.deactivate(); dragControls.dispose(); dragControls=null; }
       if (toggleDrag?.checked && dragTargets.length){ dragControls = new THREE.DragControls(dragTargets, camera, renderer.domElement);
         dragControls.addEventListener('dragstart', ()=>{ dragging=true; controls.enabled=false; tctrl.detach(); });
-        dragControls.addEventListener('drag', ()=>{ /* noop: position updates automatically */ });
+        dragControls.addEventListener('drag', ()=>{ /* noop */ });
         dragControls.addEventListener('dragend', ()=>{ dragging=false; controls.enabled=true; });
       }
     }
 
-    // === 이벤트 바인딩 ===
-    document.getElementById('toggleGrid').addEventListener('change',(e)=>{ grid.visible=e.target.checked; });
-    document.getElementById('toggleAxes').addEventListener('change',(e)=>{ axes.visible=e.target.checked; });
+    // ===== 블랙아웃 판정 & 적용 =====
+    function isAllLightsOff() {
+      const iblOff   = !document.getElementById('toggleIBL').checked || scene.environment === null;
+      const dirOff   = !document.getElementById('toggleDir').checked || !dir.visible;
+      const hemiOff  = !document.getElementById('toggleHemi').checked || !hemi.visible;
+      const spotOff  = !document.getElementById('toggleSpot').checked || !spot.visible;
+      const rimOff   = !document.getElementById('toggleRim').checked || !rim.visible;
+      const pointOff = !document.getElementById('togglePoint').checked || !point.visible;
+      return iblOff && dirOff && hemiOff && spotOff && rimOff && pointOff;
+    }
+
+    function updateBlackout() {
+      if (isAllLightsOff()) {
+        scene.background = new THREE.Color(0x000000);
+        grid.visible = false;
+        axes.visible = false;
+      } else {
+        scene.background = DEFAULT_BG;
+        grid.visible = document.getElementById('toggleGrid').checked;
+        axes.visible = document.getElementById('toggleAxes').checked;
+      }
+    }
+
+    // ===== 이벤트 바인딩 =====
+    document.getElementById('toggleGrid').addEventListener('change',(e)=>{ 
+      if (!isAllLightsOff()) grid.visible = e.target.checked; 
+    });
+    document.getElementById('toggleAxes').addEventListener('change',(e)=>{ 
+      if (!isAllLightsOff()) axes.visible = e.target.checked; 
+    });
     document.getElementById('toggleSnap').addEventListener('change',(e)=>{ const on=e.target.checked; tctrl.setTranslationSnap(on?1:null); tctrl.setRotationSnap(on?THREE.MathUtils.degToRad(15):null); tctrl.setScaleSnap(on?0.1:null); });
     document.getElementById('toggleDrag').addEventListener('change', ()=>{ refreshDragControls(); });
 
-    const paletteBtnsEls = document.querySelectorAll('[data-primitive]');
-    paletteBtnsEls.forEach(btn=>btn.addEventListener('click', ()=>createPrimitive(btn.dataset.primitive)));
+    // 조명/환경 토글 + 노출
+    document.getElementById('toggleDir').addEventListener('change', (e)=>{ dir.visible = e.target.checked; updateBlackout(); });
+    document.getElementById('toggleHemi').addEventListener('change', (e)=>{ hemi.visible = e.target.checked; updateBlackout(); });
+    document.getElementById('toggleIBL').addEventListener('change', (e)=> { enableIBL(e.target.checked); updateBlackout(); });
+    document.getElementById('toggleSpot').addEventListener('change',   (e)=> { spot.visible = e.target.checked; updateBlackout(); });
+    document.getElementById('toggleRim').addEventListener('change',    (e)=> { rim.visible = e.target.checked; updateBlackout(); });
+    document.getElementById('togglePoint').addEventListener('change',  (e)=> { point.visible = e.target.checked; updateBlackout(); });
 
+    const exposureEl = document.getElementById('exposure');
+    const exposureVal = document.getElementById('exposureVal');
+    exposureEl.addEventListener('input', (e)=> {
+      renderer.toneMappingExposure = parseFloat(e.target.value);
+      exposureVal.textContent = e.target.value;
+    });
+
+    document.querySelectorAll('[data-primitive]').forEach(btn=>btn.addEventListener('click', ()=>createPrimitive(btn.dataset.primitive)));
     document.getElementById('gltfFile').addEventListener('change',(e)=>{ const f=e.target.files[0]; if (f) addGLTF(f); e.target.value=''; });
     document.getElementById('importJson').addEventListener('change',(e)=>{ const f=e.target.files[0]; if (f) importJSON(f); e.target.value=''; });
     document.getElementById('exportJson').addEventListener('click', exportJSON);
     document.getElementById('layoutLine').addEventListener('click', layoutByStep);
     document.getElementById('focusSel').addEventListener('click', ()=>{ if(selected) controls.target.copy(selected.position); });
 
-    // 마우스 피킹 (드래그 중이거나 드래그 모드 ON이면 선택 클릭 비활성화)
+    // 마우스 피킹 (라이트 편집 중에는 장면 오브젝트 클릭 비활성화 유지)
     renderer.domElement.addEventListener('pointerdown',(e)=>{
+      if (selectedLightObj) return;        // 라이트 편집 중이면 오브젝트 선택 막기
       if (toggleDrag.checked) return; if (dragging) return;
       const rect=renderer.domElement.getBoundingClientRect();
       mouse.x=((e.clientX-rect.left)/rect.width)*2-1; mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
       raycaster.setFromCamera(mouse, camera);
       const intersects=raycaster.intersectObjects(scene.children,true);
       const first=intersects.find(hit=>hit.object && hit.object.parent!==tctrl);
-      if (first){ let root=first.object; while(root.parent && !root.userData.__id) root=root.parent; if (root.userData.__id) selectObject(root); }
+      if (first){ let root=first.object; while(root.parent && !root.userData?.__id) root=root.parent; if (root.userData?.__id) selectObject(root); }
       else { selectObject(null); }
     });
 
@@ -288,17 +596,268 @@
       if (e.key==='e'||e.key==='E') tctrl.setMode('rotate');
       if (e.key==='r'||e.key==='R') tctrl.setMode('scale');
       if (e.key==='q'||e.key==='Q') tctrl.setSpace(tctrl.space==='world'?'local':'world');
-      if (e.key==='Escape'){ tctrl.detach(); selected=null; selInfo.textContent='선택된 개체가 없습니다.'; updateSequenceUI(); }
+      if (e.key==='Escape'){
+        tctrl.detach();
+        if (selectedLightObj){ selectedLightObj=null; }
+        selected=null; selInfo.textContent='선택된 개체가 없습니다.'; updateSequenceUI();
+      }
     });
 
-    // 리사이즈 & 루프
+    // 리사이즈 & 초기화
     window.addEventListener('resize', ()=>{ fitRenderer(); });
     fitRenderer();
 
-    // 시작 바닥 추가
+    // 시작 바닥
     createPrimitive('Plane');
 
-    renderer.setAnimationLoop(()=>{ controls.update(); updateSelInfo(); renderer.render(scene, camera); });
+    // ====== 스팟 쿠키(고보) 생성/적용 ======
+    const cookieState = {
+      type: 'circle',     // circle | ring | stripes | image
+      rotDeg: 0,
+      soft: 0.35,         // 가장자리 부드러움 (0~0.95)
+      inner: 0.4,         // ring 내부반경(비율)
+      stripes: 6,         // 줄 개수
+      invert: false,
+      img: null           // 업로드 이미지 (HTMLImageElement)
+    };
+
+    const cookieCvs = document.createElement('canvas');
+    cookieCvs.width = cookieCvs.height = 512;
+    const cookieCtx = cookieCvs.getContext('2d');
+
+    function clearCookie(){
+      cookieCtx.clearRect(0,0,cookieCvs.width,cookieCvs.height);
+    }
+
+    function drawCircle(){
+      const s = cookieCvs.width;
+      const r = s*0.5;
+      const g = cookieCtx.createRadialGradient(r,r,0, r,r,r);
+      const edge = Math.max(0, 1 - cookieState.soft);
+      g.addColorStop(0.0, 'rgba(255,255,255,1)');
+      g.addColorStop(edge, 'rgba(255,255,255,1)');
+      g.addColorStop(1.0, 'rgba(255,255,255,0)');
+      cookieCtx.fillStyle = g;
+      cookieCtx.beginPath();
+      cookieCtx.arc(r,r,r,0,Math.PI*2);
+      cookieCtx.fill();
+    }
+
+    function drawRing(){
+      const s = cookieCvs.width;
+      const r = s*0.5;
+      const innerR = Math.min(Math.max(cookieState.inner, 0), 0.95) * r; // px
+      cookieCtx.save();
+      cookieCtx.translate(r,r);
+      cookieCtx.rotate(cookieState.rotDeg * Math.PI/180);
+      cookieCtx.translate(-r,-r);
+
+      const gOuter = cookieCtx.createRadialGradient(r,r,innerR, r,r,r);
+      const edge = Math.max(0, 1 - cookieState.soft);
+      gOuter.addColorStop(0.0, 'rgba(255,255,255,1)');
+      gOuter.addColorStop(edge, 'rgba(255,255,255,1)');
+      gOuter.addColorStop(1.0, 'rgba(255,255,255,0)');
+      cookieCtx.fillStyle = gOuter;
+      cookieCtx.beginPath();
+      cookieCtx.arc(r,r,r,0,Math.PI*2);
+      cookieCtx.fill();
+
+      cookieCtx.globalCompositeOperation = 'destination-out';
+      cookieCtx.beginPath();
+      cookieCtx.arc(r,r,innerR*(1-cookieState.soft*0.8),0,Math.PI*2);
+      cookieCtx.fill();
+      cookieCtx.globalCompositeOperation = 'source-over';
+      cookieCtx.restore();
+    }
+
+    function drawStripes(){
+      const s = cookieCvs.width;
+      const r = s*0.5;
+      const n = Math.max(2, Math.min(64, Math.floor(cookieState.stripes)));
+      cookieCtx.save();
+      cookieCtx.translate(r,r);
+      cookieCtx.rotate(cookieState.rotDeg * Math.PI/180);
+      cookieCtx.translate(-r,-r);
+
+      // 원형 페더 베이스
+      drawCircle();
+
+      // 줄무늬를 깎아내기
+      cookieCtx.globalCompositeOperation = 'destination-out';
+      const stripeW = s / n / 2; // 검은줄 너비
+      cookieCtx.fillStyle = 'rgba(0,0,0,1)';
+      for(let i=0;i<n;i++){
+        const x = (i * (s/n)) + stripeW*0.5;
+        cookieCtx.fillRect(x, 0, stripeW, s);
+      }
+      cookieCtx.globalCompositeOperation = 'source-over';
+      cookieCtx.restore();
+    }
+
+    function drawImageCookie(){
+      const s = cookieCvs.width;
+      const r = s*0.5;
+      const img = cookieState.img;
+      if (!img) { drawCircle(); return; }
+
+      cookieCtx.save();
+      cookieCtx.translate(r,r);
+      cookieCtx.rotate(cookieState.rotDeg * Math.PI/180);
+      cookieCtx.translate(-r,-r);
+
+      // Cover
+      const arImg = img.width / img.height;
+      let dw = s, dh = s;
+      if (arImg > 1) { dh = s; dw = s * arImg; } else { dw = s; dh = s / arImg; }
+      const dx = (s - dw)/2, dy = (s - dh)/2;
+      cookieCtx.drawImage(img, dx, dy, dw, dh);
+
+      // 그레이스케일 + 반전
+      const imgData = cookieCtx.getImageData(0,0,s,s);
+      const data = imgData.data;
+      for (let i=0;i<data.length;i+=4){
+        const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3]/255;
+        let lum = (0.299*r + 0.587*g + 0.114*b)/255;
+        if (cookieState.invert) lum = 1 - lum;
+        data[i] = data[i+1] = data[i+2] = Math.round(lum*255);
+        data[i+3] = Math.round(a*255);
+      }
+      cookieCtx.putImageData(imgData, 0, 0);
+
+      // 바깥 원형 페더
+      cookieCtx.globalCompositeOperation = 'destination-in';
+      const g = cookieCtx.createRadialGradient(r,r,0, r,r,r);
+      const edge = Math.max(0, 1 - cookieState.soft);
+      g.addColorStop(0.0, 'rgba(255,255,255,1)');
+      g.addColorStop(edge, 'rgba(255,255,255,1)');
+      g.addColorStop(1.0, 'rgba(255,255,255,0)');
+      cookieCtx.fillStyle = g;
+      cookieCtx.beginPath();
+      cookieCtx.arc(r,r,r,0,Math.PI*2);
+      cookieCtx.fill();
+      cookieCtx.globalCompositeOperation = 'source-over';
+      cookieCtx.restore();
+    }
+
+    function buildCookieTexture(){
+      clearCookie();
+      if (cookieState.type === 'circle') drawCircle();
+      else if (cookieState.type === 'ring') drawRing();
+      else if (cookieState.type === 'stripes') drawStripes();
+      else if (cookieState.type === 'image') drawImageCookie();
+
+      const tex = new THREE.CanvasTexture(cookieCvs);
+      tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy?.() || 1;
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+    function applyCookie(){
+      if (!document.getElementById('cookieOn').checked) {
+        if (spot.map) { spot.map.dispose(); spot.map = null; }
+        renderer.render(scene, camera);
+        return;
+      }
+      const t = buildCookieTexture();
+      if (spot.map) spot.map.dispose();
+      spot.map = t;
+      spot.penumbra = Math.min(0.9, Math.max(0.0, cookieState.soft + 0.25));
+      renderer.render(scene, camera);
+    }
+
+    // UI 요소 & 이벤트 바인딩
+    const elCookieOn      = document.getElementById('cookieOn');
+    const elCookieType    = document.getElementById('cookieType');
+    const elCookieRot     = document.getElementById('cookieRot');
+    const elCookieSoft    = document.getElementById('cookieSoft');
+    const elCookieInner   = document.getElementById('cookieInner');
+    const elCookieStripes = document.getElementById('cookieStripes');
+    const elCookieInvert  = document.getElementById('cookieInvert');
+    const elCookieImg     = document.getElementById('cookieImg');
+    const elCookieReset   = document.getElementById('cookieReset');
+    const rowRing         = document.getElementById('cookieRingRow');
+    const rowStripe       = document.getElementById('cookieStripeRow');
+
+    function refreshCookieRows(){
+      const t = elCookieType.value;
+      rowRing.style.display   = (t==='ring') ? '' : 'none';
+      rowStripe.style.display = (t==='stripes') ? '' : 'none';
+    }
+
+    elCookieOn.addEventListener('change', applyCookie);
+
+    elCookieType.addEventListener('change', ()=>{
+      cookieState.type = elCookieType.value;
+      refreshCookieRows();
+      applyCookie();
+    });
+    elCookieRot.addEventListener('input', ()=>{
+      cookieState.rotDeg = parseFloat(elCookieRot.value)||0;
+      applyCookie();
+    });
+    elCookieSoft.addEventListener('input', ()=>{
+      cookieState.soft = Math.min(0.95, Math.max(0, parseFloat(elCookieSoft.value)||0));
+      applyCookie();
+    });
+    elCookieInner.addEventListener('input', ()=>{
+      cookieState.inner = Math.min(0.95, Math.max(0, parseFloat(elCookieInner.value)||0.4));
+      applyCookie();
+    });
+    elCookieStripes.addEventListener('input', ()=>{
+      cookieState.stripes = Math.max(2, Math.min(64, parseInt(elCookieStripes.value,10)||6));
+      applyCookie();
+    });
+    elCookieInvert.addEventListener('change', ()=>{
+      cookieState.invert = elCookieInvert.checked;
+      applyCookie();
+    });
+    elCookieImg.addEventListener('change', (e)=>{
+      const f = e.target.files?.[0];
+      if (!f) return;
+      const img = new Image();
+      img.onload = ()=>{ cookieState.img = img; cookieState.type = 'image'; elCookieType.value = 'image'; refreshCookieRows(); applyCookie(); };
+      img.src = URL.createObjectURL(f);
+    });
+    elCookieReset.addEventListener('click', ()=>{
+      cookieState.type = 'circle';
+      elCookieType.value = 'circle';
+      elCookieRot.value = 0; cookieState.rotDeg = 0;
+      elCookieSoft.value = 0.35; cookieState.soft = 0.35;
+      elCookieInvert.checked = false; cookieState.invert = false;
+      refreshCookieRows();
+      applyCookie();
+    });
+
+    // 애니메이션 루프 + 포인트 라이트 회전 + 블랙아웃 체크
+    let t = 0;
+    renderer.setAnimationLoop(()=>{
+      controls.update();
+      t += 0.01;
+      const r = 6;
+      point.position.set(Math.cos(t)*r, 3 + Math.sin(t*0.8)*0.5, Math.sin(t)*r);
+      // 라이트 UI에 실시간 반영(트랜스폼으로 움직였을 때)
+      if (selectedLightObj) syncLightUIFromObject(selectedLightObj);
+      updateSelInfo();
+      updateBlackout();
+      renderer.render(scene, camera);
+    });
+
+    // 초기: 라이트 UI 동기화
+    (function initLightUI(){
+      const obj = currentLight();
+      attachLightTransform(obj);
+      syncLightUIFromObject(obj);
+    })();
+
+    // 쿠키 초기 적용
+    (function initCookie(){
+      refreshCookieRows();
+      applyCookie();
+    })();
+
+    // 초기 블랙아웃 상태 반영
+    updateBlackout();
   </script>
 </body>
 </html>
