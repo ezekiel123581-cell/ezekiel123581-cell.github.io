@@ -1,160 +1,137 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>김은석 · Workspace</title>
-  <meta name="description" content="개인 포트폴리오 & 워크스페이스" />
-  <style>
-    :root{
-      /* 색상 테마 변수 */
-      --bg1:#0f172a;      /* 배경 그라디언트 시작색 */
-      --bg2:#1e293b;      /* 배경 그라디언트 끝색   */
-      --card:#ffffff;     /* 카드 기본 배경색       */
-      --text:#e6edf6;     /* 기본 텍스트 색         */
-      --muted:#9fb0c5;    /* 보조 텍스트 색         */
-      --accent:#7cc4ff;   /* 버튼 그라디언트 시작   */
-      --accent2:#00e0b8;  /* 버튼 그라디언트 끝     */
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>김은석 · Workspace</title>
+<meta name="description" content="개인 포트폴리오 & 워크스페이스" />
+<style>
+:root{
+  --card:#ffffff;
+  --text:#e6edf6;
+  --muted:#9fb0c5;
+  --accent:#7cc4ff;
+  --accent2:#00e0b8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
 
-    *{box-sizing:border-box;margin:0;padding:0} /* 모든 요소 기본 박스 모델 & 여백 초기화 */
-    html,body{height:100%}
+/* ==== 일렁이는 깃발 배경 캔버스 ==== */
+.bg{
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  display:block;
+  width:100%;
+  height:100%;
+  background:#000; /* 로딩 중 임시색 */
+}
 
-    /* ===== 페이드 전환용 배경 레이어 ===== */
-    .bg{
-      position:fixed;           /* 화면 전체에 고정 */
-      inset:0;                  /* top/right/bottom/left 모두 0 */
-      background-size:cover;    /* 이미지 비율 유지하며 꽉 채움 */
-      background-position:center;
-      opacity:0;                /* 기본은 안 보임 */
-      transition:opacity 2s ease; /* 2초간 부드럽게 투명도 전환 */
-      z-index:-1;               /* 모든 콘텐츠 뒤로 */
-    }
-    .bg.visible{opacity:1;}      /* JS로 visible 클래스가 붙으면 보임 */
+/* ===== 콘텐츠 ===== */
+body{
+  font:16px/1.6 system-ui, Segoe UI, Roboto, "Apple SD Gothic Neo","Noto Sans KR", sans-serif;
+  color:var(--text);
+  min-height:100%;
+  padding:24px 24px 24px 260px;
+}
 
-    body{
-      /* 전체 텍스트/폰트 설정 */
-      font:16px/1.6 system-ui, Segoe UI, Roboto, "Apple SD Gothic Neo","Noto Sans KR", sans-serif;
-      color:var(--text);
+.sidebar{
+  position:fixed; top:0; left:0; height:100%; width:236px;
+  background:rgba(0,0,0,.35);
+  backdrop-filter:blur(8px);
+  border-right:1px solid rgba(255,255,255,.1);
+  padding:28px 18px;
+  z-index:10;
+}
+.sidebar h2{font-size:20px; margin-bottom:14px}
+.cats{display:flex; flex-direction:column; gap:8px}
+.cat{
+  display:block; width:100%;
+  color:#fff;
+  background:transparent;
+  border:1px solid rgba(255,255,255,.25);
+  padding:10px 12px; border-radius:10px; font-weight:800;
+  text-align:left; cursor:pointer;
+}
+.cat:hover{background:rgba(255,255,255,.08)}
+.cat.active{
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#001018; border-color:transparent;
+}
 
-      min-height:100%;
-      /* 왼쪽 사이드바 폭(236px) + 여유 padding 포함 */
-      padding:24px 24px 24px 260px;
-    }
+.canvas{
+  max-width:1280px; margin:0 auto;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:22px;
+  padding:22px;
+  box-shadow:0 12px 40px rgba(0,0,0,.25);
+}
+.columns{display:grid; gap:22px; grid-template-columns:58% 42%}
+.block{
+  background:#fff; color:#0b1220;
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:18px; padding:22px;
+  box-shadow:0 10px 28px rgba(0,0,0,.15);
+}
+.block h3{margin:0 0 10px; font-size:22px}
+.intro{min-height:160px}
+.desc{min-height:200px}
+.workspace .head{
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:10px
+}
+.workspace .head h3{margin:0; font-size:20px}
+.grid{
+  display:grid; gap:14px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.cardlet{
+  display:block; text-decoration:none;
+  background:#fff; color:#0b1220;
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:14px; padding:16px;
+  min-height:130px;
+  box-shadow:0 8px 20px rgba(0,0,0,.12);
+  transition:transform .15s, box-shadow .15s;
+}
+.cardlet:hover{
+  transform:translateY(-2px);
+  box-shadow:0 12px 28px rgba(0,0,0,.16);
+}
+.cardlet h4{margin:0 0 6px; font-size:18px}
+.cardlet p{margin:0; color:#475569; font-size:14px}
+.empty{
+  opacity:.7; text-align:center;
+  padding:30px 10px;
+  border:1px dashed #cbd5e1;
+  border-radius:14px;
+  background:rgba(255,255,255,.6);
+}
+footer{margin-top:14px; text-align:center; color:var(--muted)}
 
-    /* ===== 왼쪽 사이드바 ===== */
-    .sidebar{
-      position:fixed; top:0; left:0; height:100%; width:236px;
-      background:rgba(0,0,0,.35);        /* 반투명 블랙 배경 */
-      backdrop-filter:blur(8px);         /* 블러로 글래스 효과 */
-      border-right:1px solid rgba(255,255,255,.1);
-      padding:28px 18px;
-      z-index:10;                        /* 배경 위, 메인보다 위 */
-    }
-    .sidebar h2{font-size:20px; margin-bottom:14px}
-    .cats{display:flex; flex-direction:column; gap:8px} /* 카테고리 버튼 세로배치 */
-    .cat{
-      display:block; width:100%;
-      color:#fff;
-      background:transparent;
-      border:1px solid rgba(255,255,255,.25);
-      padding:10px 12px; border-radius:10px; font-weight:800;
-      text-align:left; cursor:pointer;
-    }
-    .cat:hover{background:rgba(255,255,255,.08)} /* 호버 시 살짝 하이라이트 */
-    .cat.active{
-      /* 현재 선택된 카테고리 버튼 */
-      background:linear-gradient(135deg,var(--accent),var(--accent2));
-      color:#001018; border-color:transparent;
-    }
-
-    /* ===== 메인 캔버스 (오른쪽 내용 영역) ===== */
-    .canvas{
-      max-width:1280px; margin:0 auto;
-      background:rgba(255,255,255,.06);  /* 살짝 투명 카드 느낌 */
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:22px;
-      padding:22px;
-      box-shadow:0 12px 40px rgba(0,0,0,.25);
-    }
-    /* 좌측(소개/설명) + 우측(워크스페이스) 2단 그리드 */
-    .columns{display:grid; gap:22px; grid-template-columns:58% 42%}
-
-    /* 좌측 큰 소개·설명 박스 */
-    .block{
-      background:#fff; color:#0b1220;
-      border:1px solid rgba(0,0,0,.08);
-      border-radius:18px; padding:22px;
-      box-shadow:0 10px 28px rgba(0,0,0,.15);
-    }
-    .block h3{margin:0 0 10px; font-size:22px}
-    .intro{min-height:160px} /* 자기소개 박스 높이 */
-    .desc{min-height:200px}  /* 설명 박스 높이 */
-
-    /* 우측 워크스페이스 영역 */
-    .workspace .head{
-      display:flex; align-items:center; justify-content:space-between; margin-bottom:10px
-    }
-    .workspace .head h3{margin:0; font-size:20px}
-    .grid{
-      display:grid; gap:14px;
-      grid-template-columns:repeat(2,minmax(0,1fr)); /* 2열 카드 */
-    }
-    .cardlet{
-      /* 개별 작업 카드 */
-      display:block; text-decoration:none;
-      background:#fff; color:#0b1220;
-      border:1px solid rgba(0,0,0,.08);
-      border-radius:14px; padding:16px;
-      min-height:130px;
-      box-shadow:0 8px 20px rgba(0,0,0,.12);
-      transition:transform .15s, box-shadow .15s;
-    }
-    .cardlet:hover{
-      /* 마우스 올릴 때 살짝 떠오르는 효과 */
-      transform:translateY(-2px);
-      box-shadow:0 12px 28px rgba(0,0,0,.16);
-    }
-    .cardlet h4{margin:0 0 6px; font-size:18px}
-    .cardlet p{margin:0; color:#475569; font-size:14px}
-    .empty{
-      /* 해당 카테고리에 카드가 없을 때 표시 */
-      opacity:.7; text-align:center;
-      padding:30px 10px;
-      border:1px dashed #cbd5e1;
-      border-radius:14px;
-      background:rgba(255,255,255,.6);
-    }
-
-    footer{margin-top:14px; text-align:center; color:var(--muted)}
-
-    /* 반응형 처리: 폭 좁을 때 한 컬럼으로 전환 */
-    @media (max-width:980px){ .columns{grid-template-columns:1fr} }
-    @media (max-width:640px){
-      body{padding:16px}
-      /* 모바일에서는 사이드바를 위쪽 박스로 바꿈 */
-      .sidebar{
-        position:static; width:auto; height:auto;
-        border-right:none;
-        border:1px solid rgba(255,255,255,.12);
-        border-radius:16px;
-        margin-bottom:12px;
-      }
-      .canvas{padding:16px}
-    }
-  </style>
+@media (max-width:980px){ .columns{grid-template-columns:1fr} }
+@media (max-width:640px){
+  body{padding:16px}
+  .sidebar{
+    position:static; width:auto; height:auto;
+    border-right:none;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;
+    margin-bottom:12px;
+  }
+  .canvas{padding:16px}
+}
+</style>
 </head>
 <body>
 
-<!-- === 페이드 전환 배경 이미지 2개 (crossfade 용) === -->
-<div class="bg bg1"></div>
-<div class="bg bg2"></div>
+<!-- 🔹 깃발 일렁이는 배경 -->
+<canvas id="bgCanvas" class="bg"></canvas>
 
-<!-- === 사이드바: 카테고리 버튼 === -->
+<!-- 사이드바 -->
 <aside class="sidebar">
   <h2>카테고리</h2>
   <div class="cats">
-    <!-- data-cat 속성: JS가 필터링할 때 사용 -->
     <button class="cat active" data-cat="전체">전체</button>
     <button class="cat" data-cat="게임">게임</button>
     <button class="cat" data-cat="그림">그림</button>
@@ -162,15 +139,14 @@
   </div>
 </aside>
 
-<!-- === 메인 콘텐츠 === -->
+<!-- 메인 영역 -->
 <div class="canvas">
   <div class="columns">
-    <!-- 왼쪽: 자기소개 & 설명 박스 -->
     <div class="left">
       <section class="block intro">
         <h3>자기소개</h3>
-        <p>Unity · 3D · AI 실험을 기록하는 김은석입니다.
-           왼쪽 카테고리를 클릭하면 오른쪽에 해당 작업물만 표시됩니다.</p>
+        <p>Unity · 3D · AI 실험을 기록하는 김은석입니다.<br>
+           카테고리를 클릭하면 오른쪽에 해당 작업물만 표시됩니다.</p>
       </section>
 
       <section class="block desc" style="margin-top:14px">
@@ -180,103 +156,160 @@
       </section>
     </div>
 
-    <!-- 오른쪽: 워크스페이스 (작업 카드 그리드) -->
     <div class="right workspace">
       <div class="head">
         <h3 id="ws-title">workspace · 전체</h3>
         <small style="color:#cbd5e1">카드를 클릭하면 새 탭으로 이동</small>
       </div>
-      <div id="grid" class="grid"><!-- JS가 여기에 카드 채움 --></div>
+      <div id="grid" class="grid"></div>
     </div>
   </div>
   <footer>© 2025 Eunseok Kim</footer>
 </div>
 
 <script>
-  /* ===== 1) 배경 이미지 페이드 전환 ===== */
-  const images = ['/images/bg2.png','/images/bg3.png','/images/bg4.png'];
-  let i = 0; const a = document.querySelector('.bg1'), b = document.querySelector('.bg2'); let first = true;
-  // 첫 번째 이미지를 초기 표시
-  a.style.backgroundImage = `url('${images[0]}')`;
-  a.classList.add('visible');
-  // 60초마다 이미지 교체 + crossfade
-  setInterval(()=>{
-    i = (i+1)%images.length;
-    if(first){
-      b.style.backgroundImage=`url('${images[i]}')`;
-      b.classList.add('visible');
-      a.classList.remove('visible');
-    } else {
-      a.style.backgroundImage=`url('${images[i]}')`;
-      a.classList.add('visible');
-      b.classList.remove('visible');
-    }
-    first=!first;
-  },60000);
+/* ===== 깃발 일렁이는 배경(Canvas 파형) — '원인 1'만 해결(패딩 버퍼) ===== */
+(function(){
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d', { alpha: true });
+  ctx.imageSmoothingEnabled = true;
 
-  /* ===== 2) 작업 카드 데이터 =====
-     - cat : 카테고리 (게임/그림/기타)
-     - href: 카드 클릭 시 열릴 링크
-     - disabled:true 는 준비중(클릭 불가) 표시 */
-  const items = [
-    { title:'GitHub', desc:'소스와 저장소', href:'https://github.com/ezekiel123581-cell', cat:'기타' },
-    { title:'시각예술시뮬레이터', desc:'시각 실험 데모', href:'./simulator.html', cat:'그림' },
-    { title:'GPTs', desc:'커스텀 GPT 모음', href:'https://chatgpt.com/gpts', cat:'기타' },
-    { title:'게임 프로토타입(준비중)', desc:'추가 예정', href:'#', cat:'게임', disabled:true },
-    { title:'드로잉(준비중)', desc:'추가 예정', href:'#', cat:'그림', disabled:true }
-  ];
+  // 깃허브 Pages에 올린 이미지 경로 (루트에 bg4.png 가정)
+  const IMG_URL = 'https://ezekiel123581-cell.github.io/bg4.png';
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.src = IMG_URL;
 
-  const grid = document.getElementById('grid');     // 카드가 들어갈 컨테이너
-  const title = document.getElementById('ws-title');// 현재 카테고리 표시 텍스트
+  let vw=0, vh=0, offscreen, octx;
 
-  // 선택된 카테고리(category)에 맞게 카드 목록을 렌더링하는 함수
-  function render(category='전체'){
-    grid.innerHTML = '';
-    // '전체'면 모든 아이템, 아니면 해당 카테고리만
-    const filtered = category==='전체' ? items : items.filter(it => it.cat===category);
+  // 파형 파라미터
+  const amplitude  = 12;     // 흔들림 크기
+  const wavelength = 280;    // 파장
+  const speed      = 0.9;    // 속도
+  const tilt       = 0.25;   // x 진행 위상 가중치
 
-    // 카테고리에 아이템이 없을 때
-    if(filtered.length===0){
-      grid.innerHTML = `<div class="empty">이 카테고리에 표시할 작업이 없습니다.</div>`;
-      return;
-    }
+  // ⬇️ 위/아래 노출 방지용 패딩(여유 있게)
+  const PADDING = Math.ceil(amplitude * 1.25) + 2;
 
-    // 필터링된 아이템을 카드로 변환
-    filtered.forEach(it=>{
-      const a = document.createElement('a');
-      a.className = 'cardlet';
-      a.innerHTML = `<h4>${it.title}</h4><p>${it.desc}</p>`;
-      if(it.disabled){
-        // 준비중 아이템은 클릭 비활성화
-        a.href = 'javascript:void(0)';
-        a.style.opacity = .6;
-        a.style.pointerEvents = 'none';
-      } else {
-        // 정상 아이템은 새 탭으로 열림
-        a.href = it.href;
-        a.target = '_blank';
-        a.rel = 'noopener';
-      }
-      grid.appendChild(a);
-    });
+  function resize(){
+    vw = canvas.width  = window.innerWidth;
+    vh = canvas.height = window.innerHeight;
 
-    // 상단 제목도 현재 카테고리로 업데이트
-    title.textContent = `workspace · ${category}`;
+    // 오프스크린 높이를 패딩만큼 크게
+    offscreen = document.createElement('canvas');
+    offscreen.width  = vw;
+    offscreen.height = vh + 2*PADDING;
+    octx = offscreen.getContext('2d');
+
+    drawBaseImage();
   }
 
-  // 초기에는 '전체' 카테고리로 렌더링
-  render('전체');
+  function drawBaseImage(){
+    if(!img.complete) return;
 
-  // ===== 3) 사이드바 카테고리 버튼 이벤트 =====
-  document.querySelectorAll('.cat').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      // 모든 버튼에서 active 제거 후 현재만 active
-      document.querySelectorAll('.cat').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      // 버튼의 data-cat 속성 값으로 카드 렌더링
-      render(btn.dataset.cat);
-    });
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const r  = Math.max(vw/iw, vh/ih); // cover 스케일
+    const dw = iw * r, dh = ih * r;
+    const dx = (vw - dw) * 0.5;
+    const dy = (vh - dh) * 0.5;
+
+    octx.clearRect(0,0,offscreen.width,offscreen.height);
+    // 원본을 패딩만큼 아래로 내려서 배치
+    octx.drawImage(img, dx, dy + PADDING, dw, dh);
+
+    // 위/아래 가장자리 1px을 패딩 영역으로 확장 복제(클램핑)
+    octx.drawImage(offscreen, 0, PADDING, vw, 1,              0, 0,             vw, PADDING);
+    octx.drawImage(offscreen, 0, vh + PADDING - 1, vw, 1,     0, vh + PADDING,  vw, PADDING);
+  }
+
+  let t0=0;
+  function animate(ts){
+    if(!t0) t0 = ts;
+    const time = (ts - t0) / 1000;
+
+    ctx.clearRect(0,0,vw,vh);
+
+    const SLICE_W = 2; // 세로 슬라이스 폭(성능/품질 타협)
+    for(let x=0; x<vw; x+=SLICE_W){
+      const progress = x / vw;
+      const localAmp = amplitude * (0.4 + 0.6*progress);
+      const yOffset  = Math.sin((x + time*speed*180) / wavelength * (Math.PI*2) + progress*tilt) * localAmp;
+
+      // src는 패딩 포함 높이에서 가져오고,
+      // dst는 yOffset - PADDING으로 내려 그려 항상 상/하단 노출 방지
+      ctx.drawImage(
+        offscreen,
+        x, 0, SLICE_W, vh + 2*PADDING,      // src
+        x, yOffset - PADDING, SLICE_W, vh + 2*PADDING  // dst
+      );
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  img.onload = () => { resize(); requestAnimationFrame(animate); };
+  window.addEventListener('resize', () => { resize(); drawBaseImage(); });
+})();
+
+/* ===== 작업 카드 데이터 & 필터 ===== */
+const items = [
+  { title:'GitHub', desc:'소스와 저장소', href:'https://github.com/ezekiel123581-cell', cat:'기타' },
+  { title:'시각예술시뮬레이터', desc:'시각 실험 데모', href:'./simulator.html', cat:'그림' },
+
+  /* ✅ GPT 버튼 2개 */
+  {
+    title:'GPT · 지구 각테일',
+    desc:'나만의 GPT – 지구 각테일',
+    href:'https://chatgpt.com/g/g-68b834ee2d4c8191b9ce84960a9aeda8-jigu-kagteil',
+    cat:'기타'
+  },
+  {
+    title:'GPT · 요리 레시피를 알려주는 쥐',
+    desc:'나만의 GPT – 요리 도우미',
+    href:'https://chatgpt.com/g/g-68b81a61f75c8191a19abbbe0d553797-yoriresipireul-alryeojuneun-jwi',
+    cat:'기타'
+  },
+
+  { title:'게임 프로토타입(준비중)', desc:'추가 예정', href:'#', cat:'게임', disabled:true },
+  { title:'드로잉(준비중)', desc:'추가 예정', href:'#', cat:'그림', disabled:true }
+];
+
+const grid = document.getElementById('grid');
+const title = document.getElementById('ws-title');
+
+function render(category='전체'){
+  grid.innerHTML='';
+  const filtered = category==='전체' ? items : items.filter(it=>it.cat===category);
+  if(filtered.length===0){
+    grid.innerHTML = `<div class="empty">이 카테고리에 표시할 작업이 없습니다.</div>`;
+    return;
+  }
+  filtered.forEach(it=>{
+    const a=document.createElement('a');
+    a.className='cardlet';
+    a.innerHTML=`<h4>${it.title}</h4><p>${it.desc}</p>`;
+    if(it.disabled){
+      a.href='javascript:void(0)';
+      a.style.opacity=.6;
+      a.style.pointerEvents='none';
+    } else {
+      a.href=it.href;
+      a.target='_blank';
+      a.rel='noopener';
+    }
+    grid.appendChild(a);
   });
+  title.textContent = `workspace · ${category}`;
+}
+render('전체');
+
+document.querySelectorAll('.cat').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.cat').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    render(btn.dataset.cat);
+  });
+});
 </script>
 </body>
 </html>
