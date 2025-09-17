@@ -109,6 +109,10 @@ body{
 }
 footer{margin-top:14px; text-align:center; color:var(--muted)}
 
+/* ✅ 카테고리 클릭 시 워크스페이스만 보여주는 모드 */
+.workspace-only .columns{ grid-template-columns:1fr; }
+.workspace-only .left{ display:none; }
+
 @media (max-width:980px){ .columns{grid-template-columns:1fr} }
 @media (max-width:640px){
   body{padding:16px}
@@ -183,7 +187,7 @@ footer{margin-top:14px; text-align:center; color:var(--muted)}
   let vw=0, vh=0, offscreen, octx;
 
   // 파형 파라미터
-  const amplitude  = 9;     // 흔들림 크기
+  const amplitude  = 9;      // 흔들림 크기
   const wavelength = 200;    // 파장
   const speed      = 0.3;    // 속도
   const tilt       = 0.25;   // x 진행 위상 가중치
@@ -302,14 +306,26 @@ function render(category='전체'){
   title.textContent = `workspace · ${category}`;
 }
 render('전체');
+// ✅ 초기엔 소개 보이도록(전체 카테고리) 보장
+document.body.classList.remove('workspace-only');
 
 document.querySelectorAll('.cat').forEach(btn=>{
   btn.addEventListener('click',()=>{
     document.querySelectorAll('.cat').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    render(btn.dataset.cat);
+
+    const cat = btn.dataset.cat;
+    render(cat);
+
+    // ✅ '전체'면 소개 보이고, 나머지는 워크스페이스만
+    if (cat === '전체') {
+      document.body.classList.remove('workspace-only');
+    } else {
+      document.body.classList.add('workspace-only');
+    }
   });
 });
 </script>
 </body>
 </html>
+
