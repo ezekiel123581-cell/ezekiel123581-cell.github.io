@@ -123,7 +123,7 @@
           <div class="smallnote">라이트 선택 후 값을 바꾸거나, 장면에서 기즈모로 직접 드래그하세요.</div>
         </div>
 
-        <!-- 스팟 쿠키(패턴) 추가 -->
+        <!-- 스팟 쿠키(패턴) -->
         <h2>스팟 쿠키(패턴)</h2>
         <div class="stack">
           <label class="toggle"><input id="cookieOn" type="checkbox" checked /> 쿠키 사용</label>
@@ -149,6 +149,15 @@
             <button id="cookieReset" class="btn">기본(동그라미)</button>
           </div>
           <div class="smallnote">밝은 부분이 비추는 영역입니다. (쿠키=스팟 프로젝션 마스크)</div>
+        </div>
+
+        <!-- 조명 시각화 -->
+        <h2>조명 시각화</h2>
+        <div class="row">
+          <label class="toggle"><input id="visHelpers" type="checkbox" checked /> 라이트 헬퍼</label>
+          <label class="toggle"><input id="visBeams" type="checkbox" checked /> 빔/타겟 라인</label>
+          <label class="toggle"><input id="visSpotFoot" type="checkbox" checked /> 스팟 투영 원</label>
+          <label class="toggle"><input id="visDirFrustum" type="checkbox" /> 키 그림자 영역</label>
         </div>
 
         <h2>배치 유틸</h2>
@@ -270,19 +279,19 @@
       if(on){
         if(iblTexture){
           scene.environment = iblTexture;
-          return;
+        } else {
+          rgbeLoader.setDataType(THREE.UnsignedByteType)
+            .load('https://threejs.org/examples/textures/equirectangular/royal_esplanade_1k.hdr',
+              (hdr)=>{
+                iblTexture = pmrem.fromEquirectangular(hdr).texture;
+                hdr.dispose && hdr.dispose();
+                scene.environment = iblTexture;
+                updateBlackout();
+              },
+              undefined,
+              (err)=>{ console.warn('HDR 로드 실패:', err); }
+            );
         }
-        rgbeLoader.setDataType(THREE.UnsignedByteType)
-          .load('https://threejs.org/examples/textures/equirectangular/royal_esplanade_1k.hdr',
-            (hdr)=>{
-              iblTexture = pmrem.fromEquirectangular(hdr).texture;
-              hdr.dispose && hdr.dispose();
-              scene.environment = iblTexture;
-              updateBlackout();
-            },
-            undefined,
-            (err)=>{ console.warn('HDR 로드 실패:', err); }
-          );
       } else {
         scene.environment = null;
       }
@@ -395,7 +404,6 @@
     }
 
     function attachLightTransform(obj){
-      // 오브젝트 선택 해제하고 라이트에 트랜스폼 부착
       selected = null; updateSequenceUI();
       tctrl.detach();
       tctrl.attach(obj);
@@ -416,7 +424,6 @@
         const deg = Math.min(80, Math.max(5, parseFloat(lAngle.value)||35));
         spot.angle = THREE.MathUtils.degToRad(deg);
       }
-      // 스팟/디렉셔널은 target 이동 후 행렬 업데이트
       if (obj === spot.target || obj === dir.target) {
         obj.updateMatrixWorld();
       }
@@ -439,19 +446,14 @@
     });
 
     [liX, liY, liZ, lInt, lAngle].forEach(el=>{
-      el.addEventListener('input', ()=>{
-        updateLightFromInputs();
-      });
-      el.addEventListener('change', ()=>{
-        updateLightFromInputs();
-      });
+      el.addEventListener('input', updateLightFromInputs);
+      el.addEventListener('change', updateLightFromInputs);
     });
 
     focusLightBtn.addEventListener('click', ()=>{
       focusCameraTo(currentLight());
     });
 
-    // tctrl 변경 시 숫자 입력 갱신
     tctrl.addEventListener('change', ()=>{
       if (selectedLightObj) {
         syncLightUIFromObject(selectedLightObj);
@@ -459,7 +461,7 @@
       updateSelInfo();
     });
 
-    // ---- 선택 정보 표시(라이트도 지원) ----
+    // ---- 선택 정보 표시 ----
     function updateSelInfo(){
       if (selectedLightObj) {
         const p=selectedLightObj.position;
@@ -544,6 +546,121 @@
       }
     }
 
+    // =========================
+    // 조명 "방향/발원" 시각화
+    // =========================
+    // 헬퍼들
+    const dirHelper  = new THREE.DirectionalLightHelper(dir, 1, 0x38bdf8);
+    const rimHelper  = new THREE.DirectionalLightHelper(rim, 1, 0xf43f5e);
+    const spotHelper = new THREE.SpotLightHelper(spot, 0x22c55e);
+    const pointHelper= new THREE.PointLightHelper(point, 0.2, 0xffc107);
+    const dirCamHelper = new THREE.CameraHelper(dir.shadow.camera);
+
+    // 빔/타겟 라인
+    function makeLine(color){
+      const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+      const mat = new THREE.LineBasicMaterial({ color, transparent:true, opacity:0.85 });
+      const line = new THREE.Line(geo, mat);
+      return line;
+    }
+    const dirLine  = makeLine(0x38bdf8);
+    const rimLine  = makeLine(0xf43f5e);
+    const spotLine = makeLine(0x22c55e);
+
+    // 스팟 투영 원(지면 y=0)
+    const spotFoot = new THREE.LineLoop(
+      new THREE.CircleGeometry(1, 64),
+      new THREE.LineBasicMaterial({ color:0x22c55e, transparent:true, opacity:0.65 })
+    );
+    spotFoot.rotation.x = -Math.PI/2; // XZ평면
+    spotFoot.visible = false;
+
+    // 도우미 마킹(피킹 무시용)
+    function markHelper(obj){ obj.traverse?.(o=>{ o.userData.__helper = true; }); }
+    [dirHelper, rimHelper, spotHelper, pointHelper, dirCamHelper, dirLine, rimLine, spotLine, spotFoot].forEach(o=>{
+      markHelper(o); scene.add(o);
+    });
+
+    // UI 토글
+    const visHelpers    = document.getElementById('visHelpers');
+    const visBeams      = document.getElementById('visBeams');
+    const visSpotFoot   = document.getElementById('visSpotFoot');
+    const visDirFrustum = document.getElementById('visDirFrustum');
+
+    visHelpers.addEventListener('change', ()=>updateVisualizers(true));
+    visBeams.addEventListener('change',   ()=>updateVisualizers(true));
+    visSpotFoot.addEventListener('change',()=>updateVisualizers(true));
+    visDirFrustum.addEventListener('change',()=>updateVisualizers(true));
+
+    function setLineEnds(line, a, b){
+      const pos = line.geometry.attributes.position;
+      pos.setXYZ(0, a.x, a.y, a.z);
+      pos.setXYZ(1, b.x, b.y, b.z);
+      pos.needsUpdate = true;
+      line.visible = true;
+    }
+
+    function groundIntersection(origin, dirNorm){
+      // 평면 y=0 과 교차 (t = -origin.y / dir.y)
+      if (Math.abs(dirNorm.y) < 1e-5) return null;
+      const t = -origin.y / dirNorm.y;
+      if (t <= 0) return null;
+      return origin.clone().add(dirNorm.clone().multiplyScalar(t)); // 교차점
+    }
+
+    function updateSpotFootprint(){
+      if (!visSpotFoot.checked || !spot.visible) { spotFoot.visible = false; return; }
+      const o = spot.getWorldPosition(new THREE.Vector3());
+      const tgt = spot.target.getWorldPosition(new THREE.Vector3());
+      const d = tgt.clone().sub(o).normalize();
+      const hit = groundIntersection(o, d);
+      if (!hit){ spotFoot.visible=false; return; }
+      const dist = hit.distanceTo(o);
+      const radius = Math.tan(spot.angle) * dist;
+      spotFoot.position.copy(hit);
+      spotFoot.scale.setScalar(Math.max(0.001, radius));
+      spotFoot.visible = true;
+    }
+
+    function updateVisualizers(force=false){
+      // 헬퍼 가시성
+      const helpersOn = visHelpers.checked;
+      dirHelper.visible   = helpersOn && dir.visible;
+      rimHelper.visible   = helpersOn && rim.visible;
+      spotHelper.visible  = helpersOn && spot.visible;
+      pointHelper.visible = helpersOn && point.visible;
+
+      dirCamHelper.visible = visDirFrustum.checked && dir.visible;
+
+      // 헬퍼 갱신(스팟은 매 프레임 필요)
+      spotHelper.update();
+      dirHelper.update?.();
+      rimHelper.update?.();
+
+      // 빔/타겟 라인
+      const beamsOn = visBeams.checked;
+      dirLine.visible = rimLine.visible = spotLine.visible = false;
+      if (beamsOn){
+        if (dir.visible){
+          setLineEnds(dirLine, dir.position, dir.target.getWorldPosition(new THREE.Vector3()));
+        }
+        if (rim.visible){
+          setLineEnds(rimLine, rim.position, rim.target?.getWorldPosition(new THREE.Vector3()) ?? new THREE.Vector3(0,0,0));
+        }
+        if (spot.visible){
+          // 스팟: 라인은 라이트 → 지면 교차(or 타겟)
+          const o = spot.getWorldPosition(new THREE.Vector3());
+          const tgt = spot.target.getWorldPosition(new THREE.Vector3());
+          const d = tgt.clone().sub(o).normalize();
+          const hit = groundIntersection(o, d);
+          setLineEnds(spotLine, o, hit ?? tgt);
+        }
+      }
+
+      // 스팟 투영 원
+      updateSpotFootprint();
+    }
+
     // ===== 이벤트 바인딩 =====
     document.getElementById('toggleGrid').addEventListener('change',(e)=>{ 
       if (!isAllLightsOff()) grid.visible = e.target.checked; 
@@ -555,12 +672,12 @@
     document.getElementById('toggleDrag').addEventListener('change', ()=>{ refreshDragControls(); });
 
     // 조명/환경 토글 + 노출
-    document.getElementById('toggleDir').addEventListener('change', (e)=>{ dir.visible = e.target.checked; updateBlackout(); });
+    document.getElementById('toggleDir').addEventListener('change', (e)=>{ dir.visible = e.target.checked; updateBlackout(); updateVisualizers(true); });
     document.getElementById('toggleHemi').addEventListener('change', (e)=>{ hemi.visible = e.target.checked; updateBlackout(); });
     document.getElementById('toggleIBL').addEventListener('change', (e)=> { enableIBL(e.target.checked); updateBlackout(); });
-    document.getElementById('toggleSpot').addEventListener('change',   (e)=> { spot.visible = e.target.checked; updateBlackout(); });
-    document.getElementById('toggleRim').addEventListener('change',    (e)=> { rim.visible = e.target.checked; updateBlackout(); });
-    document.getElementById('togglePoint').addEventListener('change',  (e)=> { point.visible = e.target.checked; updateBlackout(); });
+    document.getElementById('toggleSpot').addEventListener('change',   (e)=> { spot.visible = e.target.checked; updateBlackout(); updateVisualizers(true); });
+    document.getElementById('toggleRim').addEventListener('change',    (e)=> { rim.visible = e.target.checked; updateBlackout(); updateVisualizers(true); });
+    document.getElementById('togglePoint').addEventListener('change',  (e)=> { point.visible = e.target.checked; updateBlackout(); updateVisualizers(true); });
 
     const exposureEl = document.getElementById('exposure');
     const exposureVal = document.getElementById('exposureVal');
@@ -576,16 +693,41 @@
     document.getElementById('layoutLine').addEventListener('click', layoutByStep);
     document.getElementById('focusSel').addEventListener('click', ()=>{ if(selected) controls.target.copy(selected.position); });
 
-    // 마우스 피킹 (라이트 편집 중에는 장면 오브젝트 클릭 비활성화 유지)
+    // ===== 스팟 쿠키(고보) 생성/적용 =====
+    const cookieState = { type:'circle', rotDeg:0, soft:0.35, inner:0.4, stripes:6, invert:false, img:null };
+    const cookieCvs = document.createElement('canvas'); cookieCvs.width = cookieCvs.height = 512;
+    const cookieCtx = cookieCvs.getContext('2d');
+    function clearCookie(){ cookieCtx.clearRect(0,0,cookieCvs.width,cookieCvs.height); }
+    function drawCircle(){ const s=cookieCvs.width, r=s*0.5, g=cookieCtx.createRadialGradient(r,r,0,r,r,r), e=Math.max(0,1-cookieState.soft); g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(e,'rgba(255,255,255,1)'); g.addColorStop(1,'rgba(255,255,255,0)'); cookieCtx.fillStyle=g; cookieCtx.beginPath(); cookieCtx.arc(r,r,r,0,Math.PI*2); cookieCtx.fill(); }
+    function drawRing(){ const s=cookieCvs.width, r=s*0.5, ir=Math.min(Math.max(cookieState.inner,0),0.95)*r; cookieCtx.save(); cookieCtx.translate(r,r); cookieCtx.rotate(cookieState.rotDeg*Math.PI/180); cookieCtx.translate(-r,-r); const g=cookieCtx.createRadialGradient(r,r,ir,r,r,r), e=Math.max(0,1-cookieState.soft); g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(e,'rgba(255,255,255,1)'); g.addColorStop(1,'rgba(255,255,255,0)'); cookieCtx.fillStyle=g; cookieCtx.beginPath(); cookieCtx.arc(r,r,r,0,Math.PI*2); cookieCtx.fill(); cookieCtx.globalCompositeOperation='destination-out'; cookieCtx.beginPath(); cookieCtx.arc(r,r,ir*(1-cookieState.soft*0.8),0,Math.PI*2); cookieCtx.fill(); cookieCtx.globalCompositeOperation='source-over'; cookieCtx.restore(); }
+    function drawStripes(){ const s=cookieCvs.width, r=s*0.5, n=Math.max(2,Math.min(64,Math.floor(cookieState.stripes))); cookieCtx.save(); cookieCtx.translate(r,r); cookieCtx.rotate(cookieState.rotDeg*Math.PI/180); cookieCtx.translate(-r,-r); drawCircle(); cookieCtx.globalCompositeOperation='destination-out'; const w=s/n/2; cookieCtx.fillStyle='rgba(0,0,0,1)'; for(let i=0;i<n;i++){ const x=(i*(s/n))+w*0.5; cookieCtx.fillRect(x,0,w,s);} cookieCtx.globalCompositeOperation='source-over'; cookieCtx.restore(); }
+    function drawImageCookie(){ const s=cookieCvs.width, r=s*0.5, img=cookieState.img; if(!img){ drawCircle(); return; } cookieCtx.save(); cookieCtx.translate(r,r); cookieCtx.rotate(cookieState.rotDeg*Math.PI/180); cookieCtx.translate(-r,-r); const ar=img.width/img.height; let dw=s, dh=s; if(ar>1){ dh=s; dw=s*ar;} else { dw=s; dh=s/ar;} const dx=(s-dw)/2, dy=(s-dh)/2; cookieCtx.drawImage(img,dx,dy,dw,dh); const im=cookieCtx.getImageData(0,0,s,s), data=im.data; for(let i=0;i<data.length;i+=4){ const rr=data[i],gg=data[i+1],bb=data[i+2],aa=data[i+3]/255; let lum=(0.299*rr+0.587*gg+0.114*bb)/255; if(cookieState.invert) lum=1-lum; data[i]=data[i+1]=data[i+2]=Math.round(lum*255); data[i+3]=Math.round(aa*255);} cookieCtx.putImageData(im,0,0); cookieCtx.globalCompositeOperation='destination-in'; const g=cookieCtx.createRadialGradient(r,r,0,r,r,r), e=Math.max(0,1-cookieState.soft); g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(e,'rgba(255,255,255,1)'); g.addColorStop(1,'rgba(255,255,255,0)'); cookieCtx.fillStyle=g; cookieCtx.beginPath(); cookieCtx.arc(r,r,r,0,Math.PI*2); cookieCtx.fill(); cookieCtx.globalCompositeOperation='source-over'; cookieCtx.restore(); }
+    function buildCookieTexture(){ clearCookie(); if(cookieState.type==='circle') drawCircle(); else if(cookieState.type==='ring') drawRing(); else if(cookieState.type==='stripes') drawStripes(); else if(cookieState.type==='image') drawImageCookie(); const tex=new THREE.CanvasTexture(cookieCvs); tex.wrapS=tex.wrapT=THREE.ClampToEdgeWrapping; tex.anisotropy=renderer.capabilities.getMaxAnisotropy?.()||1; tex.needsUpdate=true; return tex; }
+    function applyCookie(){ if(!document.getElementById('cookieOn').checked){ if(spot.map){ spot.map.dispose(); spot.map=null; } return; } const t=buildCookieTexture(); if(spot.map) spot.map.dispose(); spot.map=t; spot.penumbra=Math.min(0.9, Math.max(0.0, cookieState.soft+0.25)); }
+    const elCookieOn=document.getElementById('cookieOn'), elCookieType=document.getElementById('cookieType'), elCookieRot=document.getElementById('cookieRot'), elCookieSoft=document.getElementById('cookieSoft'), elCookieInner=document.getElementById('cookieInner'), elCookieStripes=document.getElementById('cookieStripes'), elCookieInvert=document.getElementById('cookieInvert'), elCookieImg=document.getElementById('cookieImg'), elCookieReset=document.getElementById('cookieReset'), rowRing=document.getElementById('cookieRingRow'), rowStripe=document.getElementById('cookieStripeRow');
+    function refreshCookieRows(){ const t=elCookieType.value; rowRing.style.display=(t==='ring')?'':'none'; rowStripe.style.display=(t==='stripes')?'':'none'; }
+    elCookieOn.addEventListener('change', applyCookie);
+    elCookieType.addEventListener('change', ()=>{ cookieState.type=elCookieType.value; refreshCookieRows(); applyCookie(); });
+    elCookieRot.addEventListener('input', ()=>{ cookieState.rotDeg=parseFloat(elCookieRot.value)||0; applyCookie(); });
+    elCookieSoft.addEventListener('input', ()=>{ cookieState.soft=Math.min(0.95,Math.max(0,parseFloat(elCookieSoft.value)||0)); applyCookie(); });
+    elCookieInner.addEventListener('input', ()=>{ cookieState.inner=Math.min(0.95,Math.max(0,parseFloat(elCookieInner.value)||0.4)); applyCookie(); });
+    elCookieStripes.addEventListener('input', ()=>{ cookieState.stripes=Math.max(2,Math.min(64,parseInt(elCookieStripes.value,10)||6)); applyCookie(); });
+    elCookieInvert.addEventListener('change', ()=>{ cookieState.invert=elCookieInvert.checked; applyCookie(); });
+    elCookieImg.addEventListener('change', (e)=>{ const f=e.target.files?.[0]; if(!f) return; const img=new Image(); img.onload=()=>{ cookieState.img=img; cookieState.type='image'; elCookieType.value='image'; refreshCookieRows(); applyCookie(); }; img.src=URL.createObjectURL(f); });
+    elCookieReset.addEventListener('click', ()=>{ cookieState.type='circle'; elCookieType.value='circle'; elCookieRot.value=0; cookieState.rotDeg=0; elCookieSoft.value=0.35; cookieState.soft=0.35; elCookieInvert.checked=false; cookieState.invert=false; refreshCookieRows(); applyCookie(); });
+
+    // ===== 이벤트 바인딩(계속) =====
+    // 마우스 피킹: 헬퍼 오브젝트는 무시
+    function isHelperObject(obj){ let p=obj; while(p){ if(p.userData?.__helper) return true; p=p.parent; } return false; }
     renderer.domElement.addEventListener('pointerdown',(e)=>{
-      if (selectedLightObj) return;        // 라이트 편집 중이면 오브젝트 선택 막기
+      if (selectedLightObj) return;
       if (toggleDrag.checked) return; if (dragging) return;
       const rect=renderer.domElement.getBoundingClientRect();
       mouse.x=((e.clientX-rect.left)/rect.width)*2-1; mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
       raycaster.setFromCamera(mouse, camera);
       const intersects=raycaster.intersectObjects(scene.children,true);
-      const first=intersects.find(hit=>hit.object && hit.object.parent!==tctrl);
-      if (first){ let root=first.object; while(root.parent && !root.userData?.__id) root=root.parent; if (root.userData?.__id) selectObject(root); }
+      const hit = intersects.find(h=> h.object && !isHelperObject(h.object) && h.object.parent!==tctrl);
+      if (hit){ let root=hit.object; while(root.parent && !root.userData?.__id) root=root.parent; if (root.userData?.__id) selectObject(root); }
       else { selectObject(null); }
     });
 
@@ -604,259 +746,31 @@
     });
 
     // 리사이즈 & 초기화
-    window.addEventListener('resize', ()=>{ fitRenderer(); });
+    window.addEventListener('resize', fitRenderer);
     fitRenderer();
 
     // 시작 바닥
     createPrimitive('Plane');
 
-    // ====== 스팟 쿠키(고보) 생성/적용 ======
-    const cookieState = {
-      type: 'circle',     // circle | ring | stripes | image
-      rotDeg: 0,
-      soft: 0.35,         // 가장자리 부드러움 (0~0.95)
-      inner: 0.4,         // ring 내부반경(비율)
-      stripes: 6,         // 줄 개수
-      invert: false,
-      img: null           // 업로드 이미지 (HTMLImageElement)
-    };
-
-    const cookieCvs = document.createElement('canvas');
-    cookieCvs.width = cookieCvs.height = 512;
-    const cookieCtx = cookieCvs.getContext('2d');
-
-    function clearCookie(){
-      cookieCtx.clearRect(0,0,cookieCvs.width,cookieCvs.height);
-    }
-
-    function drawCircle(){
-      const s = cookieCvs.width;
-      const r = s*0.5;
-      const g = cookieCtx.createRadialGradient(r,r,0, r,r,r);
-      const edge = Math.max(0, 1 - cookieState.soft);
-      g.addColorStop(0.0, 'rgba(255,255,255,1)');
-      g.addColorStop(edge, 'rgba(255,255,255,1)');
-      g.addColorStop(1.0, 'rgba(255,255,255,0)');
-      cookieCtx.fillStyle = g;
-      cookieCtx.beginPath();
-      cookieCtx.arc(r,r,r,0,Math.PI*2);
-      cookieCtx.fill();
-    }
-
-    function drawRing(){
-      const s = cookieCvs.width;
-      const r = s*0.5;
-      const innerR = Math.min(Math.max(cookieState.inner, 0), 0.95) * r; // px
-      cookieCtx.save();
-      cookieCtx.translate(r,r);
-      cookieCtx.rotate(cookieState.rotDeg * Math.PI/180);
-      cookieCtx.translate(-r,-r);
-
-      const gOuter = cookieCtx.createRadialGradient(r,r,innerR, r,r,r);
-      const edge = Math.max(0, 1 - cookieState.soft);
-      gOuter.addColorStop(0.0, 'rgba(255,255,255,1)');
-      gOuter.addColorStop(edge, 'rgba(255,255,255,1)');
-      gOuter.addColorStop(1.0, 'rgba(255,255,255,0)');
-      cookieCtx.fillStyle = gOuter;
-      cookieCtx.beginPath();
-      cookieCtx.arc(r,r,r,0,Math.PI*2);
-      cookieCtx.fill();
-
-      cookieCtx.globalCompositeOperation = 'destination-out';
-      cookieCtx.beginPath();
-      cookieCtx.arc(r,r,innerR*(1-cookieState.soft*0.8),0,Math.PI*2);
-      cookieCtx.fill();
-      cookieCtx.globalCompositeOperation = 'source-over';
-      cookieCtx.restore();
-    }
-
-    function drawStripes(){
-      const s = cookieCvs.width;
-      const r = s*0.5;
-      const n = Math.max(2, Math.min(64, Math.floor(cookieState.stripes)));
-      cookieCtx.save();
-      cookieCtx.translate(r,r);
-      cookieCtx.rotate(cookieState.rotDeg * Math.PI/180);
-      cookieCtx.translate(-r,-r);
-
-      // 원형 페더 베이스
-      drawCircle();
-
-      // 줄무늬를 깎아내기
-      cookieCtx.globalCompositeOperation = 'destination-out';
-      const stripeW = s / n / 2; // 검은줄 너비
-      cookieCtx.fillStyle = 'rgba(0,0,0,1)';
-      for(let i=0;i<n;i++){
-        const x = (i * (s/n)) + stripeW*0.5;
-        cookieCtx.fillRect(x, 0, stripeW, s);
-      }
-      cookieCtx.globalCompositeOperation = 'source-over';
-      cookieCtx.restore();
-    }
-
-    function drawImageCookie(){
-      const s = cookieCvs.width;
-      const r = s*0.5;
-      const img = cookieState.img;
-      if (!img) { drawCircle(); return; }
-
-      cookieCtx.save();
-      cookieCtx.translate(r,r);
-      cookieCtx.rotate(cookieState.rotDeg * Math.PI/180);
-      cookieCtx.translate(-r,-r);
-
-      // Cover
-      const arImg = img.width / img.height;
-      let dw = s, dh = s;
-      if (arImg > 1) { dh = s; dw = s * arImg; } else { dw = s; dh = s / arImg; }
-      const dx = (s - dw)/2, dy = (s - dh)/2;
-      cookieCtx.drawImage(img, dx, dy, dw, dh);
-
-      // 그레이스케일 + 반전
-      const imgData = cookieCtx.getImageData(0,0,s,s);
-      const data = imgData.data;
-      for (let i=0;i<data.length;i+=4){
-        const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3]/255;
-        let lum = (0.299*r + 0.587*g + 0.114*b)/255;
-        if (cookieState.invert) lum = 1 - lum;
-        data[i] = data[i+1] = data[i+2] = Math.round(lum*255);
-        data[i+3] = Math.round(a*255);
-      }
-      cookieCtx.putImageData(imgData, 0, 0);
-
-      // 바깥 원형 페더
-      cookieCtx.globalCompositeOperation = 'destination-in';
-      const g = cookieCtx.createRadialGradient(r,r,0, r,r,r);
-      const edge = Math.max(0, 1 - cookieState.soft);
-      g.addColorStop(0.0, 'rgba(255,255,255,1)');
-      g.addColorStop(edge, 'rgba(255,255,255,1)');
-      g.addColorStop(1.0, 'rgba(255,255,255,0)');
-      cookieCtx.fillStyle = g;
-      cookieCtx.beginPath();
-      cookieCtx.arc(r,r,r,0,Math.PI*2);
-      cookieCtx.fill();
-      cookieCtx.globalCompositeOperation = 'source-over';
-      cookieCtx.restore();
-    }
-
-    function buildCookieTexture(){
-      clearCookie();
-      if (cookieState.type === 'circle') drawCircle();
-      else if (cookieState.type === 'ring') drawRing();
-      else if (cookieState.type === 'stripes') drawStripes();
-      else if (cookieState.type === 'image') drawImageCookie();
-
-      const tex = new THREE.CanvasTexture(cookieCvs);
-      tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
-      tex.anisotropy = renderer.capabilities.getMaxAnisotropy?.() || 1;
-      tex.needsUpdate = true;
-      return tex;
-    }
-
-    function applyCookie(){
-      if (!document.getElementById('cookieOn').checked) {
-        if (spot.map) { spot.map.dispose(); spot.map = null; }
-        renderer.render(scene, camera);
-        return;
-      }
-      const t = buildCookieTexture();
-      if (spot.map) spot.map.dispose();
-      spot.map = t;
-      spot.penumbra = Math.min(0.9, Math.max(0.0, cookieState.soft + 0.25));
-      renderer.render(scene, camera);
-    }
-
-    // UI 요소 & 이벤트 바인딩
-    const elCookieOn      = document.getElementById('cookieOn');
-    const elCookieType    = document.getElementById('cookieType');
-    const elCookieRot     = document.getElementById('cookieRot');
-    const elCookieSoft    = document.getElementById('cookieSoft');
-    const elCookieInner   = document.getElementById('cookieInner');
-    const elCookieStripes = document.getElementById('cookieStripes');
-    const elCookieInvert  = document.getElementById('cookieInvert');
-    const elCookieImg     = document.getElementById('cookieImg');
-    const elCookieReset   = document.getElementById('cookieReset');
-    const rowRing         = document.getElementById('cookieRingRow');
-    const rowStripe       = document.getElementById('cookieStripeRow');
-
-    function refreshCookieRows(){
-      const t = elCookieType.value;
-      rowRing.style.display   = (t==='ring') ? '' : 'none';
-      rowStripe.style.display = (t==='stripes') ? '' : 'none';
-    }
-
-    elCookieOn.addEventListener('change', applyCookie);
-
-    elCookieType.addEventListener('change', ()=>{
-      cookieState.type = elCookieType.value;
-      refreshCookieRows();
-      applyCookie();
-    });
-    elCookieRot.addEventListener('input', ()=>{
-      cookieState.rotDeg = parseFloat(elCookieRot.value)||0;
-      applyCookie();
-    });
-    elCookieSoft.addEventListener('input', ()=>{
-      cookieState.soft = Math.min(0.95, Math.max(0, parseFloat(elCookieSoft.value)||0));
-      applyCookie();
-    });
-    elCookieInner.addEventListener('input', ()=>{
-      cookieState.inner = Math.min(0.95, Math.max(0, parseFloat(elCookieInner.value)||0.4));
-      applyCookie();
-    });
-    elCookieStripes.addEventListener('input', ()=>{
-      cookieState.stripes = Math.max(2, Math.min(64, parseInt(elCookieStripes.value,10)||6));
-      applyCookie();
-    });
-    elCookieInvert.addEventListener('change', ()=>{
-      cookieState.invert = elCookieInvert.checked;
-      applyCookie();
-    });
-    elCookieImg.addEventListener('change', (e)=>{
-      const f = e.target.files?.[0];
-      if (!f) return;
-      const img = new Image();
-      img.onload = ()=>{ cookieState.img = img; cookieState.type = 'image'; elCookieType.value = 'image'; refreshCookieRows(); applyCookie(); };
-      img.src = URL.createObjectURL(f);
-    });
-    elCookieReset.addEventListener('click', ()=>{
-      cookieState.type = 'circle';
-      elCookieType.value = 'circle';
-      elCookieRot.value = 0; cookieState.rotDeg = 0;
-      elCookieSoft.value = 0.35; cookieState.soft = 0.35;
-      elCookieInvert.checked = false; cookieState.invert = false;
-      refreshCookieRows();
-      applyCookie();
-    });
-
-    // 애니메이션 루프 + 포인트 라이트 회전 + 블랙아웃 체크
-    let t = 0;
+    // 애니메이션 루프
+    let time = 0;
     renderer.setAnimationLoop(()=>{
       controls.update();
-      t += 0.01;
+      time += 0.01;
       const r = 6;
-      point.position.set(Math.cos(t)*r, 3 + Math.sin(t*0.8)*0.5, Math.sin(t)*r);
-      // 라이트 UI에 실시간 반영(트랜스폼으로 움직였을 때)
+      point.position.set(Math.cos(time)*r, 3 + Math.sin(time*0.8)*0.5, Math.sin(time)*r);
+
       if (selectedLightObj) syncLightUIFromObject(selectedLightObj);
       updateSelInfo();
       updateBlackout();
+      updateVisualizers();
       renderer.render(scene, camera);
     });
 
-    // 초기: 라이트 UI 동기화
-    (function initLightUI(){
-      const obj = currentLight();
-      attachLightTransform(obj);
-      syncLightUIFromObject(obj);
-    })();
-
-    // 쿠키 초기 적용
-    (function initCookie(){
-      refreshCookieRows();
-      applyCookie();
-    })();
-
-    // 초기 블랙아웃 상태 반영
+    // 초기: 라이트 UI 동기화 & 쿠키 적용 & 시각화 갱신
+    (function initLightUI(){ const obj = currentLight(); attachLightTransform(obj); syncLightUIFromObject(obj); })();
+    (function initCookie(){ refreshCookieRows(); applyCookie(); })();
+    updateVisualizers(true);
     updateBlackout();
   </script>
 </body>
