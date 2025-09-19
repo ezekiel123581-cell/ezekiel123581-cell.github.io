@@ -3,47 +3,109 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>드로잉 앱 · 레이어 패널(UI)</title>
+<title>드로잉 앱 · 레이어 패널(UI) + 이미지 이동/스케일/회전</title>
 <style>
   html,body{margin:0;height:100vh;width:100vw;overflow:hidden}
   #wrap{position:relative;width:100vw;height:100vh}
   #view{position:absolute;inset:0;background:#fff;touch-action:none;display:block;width:100%;height:100%}
+  #overlay{position:absolute;inset:0;pointer-events:none}
+
   /* 상단 도구바 */
-  .toolbar{position:fixed;top:10px;left:10px;z-index:10;background:rgba(255,255,255,.96);padding:8px 10px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.08);font:13px/1.2 system-ui; display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .toolbar{
+    position:fixed;top:10px;left:10px;z-index:10;
+    background:rgba(255,255,255,.96);padding:8px 10px;border-radius:10px;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+    font:13px/1.2 system-ui; display:flex; gap:10px; align-items:center; flex-wrap:wrap
+  }
   .toolbar .group{display:flex; gap:6px; align-items:center}
   .toolbar button{margin:0}
   .small{font-size:12px;opacity:.85}
-  /* 레이어 패널 */
-  #layerPanel{position:fixed;right:10px;top:10px;bottom:10px;width:280px;z-index:11;background:rgba(255,255,255,.96);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.08);display:flex;flex-direction:column}
-  #layerPanel .header{padding:8px 10px;border-bottom:1px solid #e5e7eb;display:flex;gap:6px;align-items:center;justify-content:space-between}
-  #layerPanel .list{overflow:auto;padding:8px}
-  .layer-item{border:1px solid #e5e7eb;border-radius:8px;padding:8px;margin-bottom:8px;background:#fff;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto;grid-column-gap:6px;grid-row-gap:6px}
+
+  /* ===== 레이어 패널 (개선: 가로 스크롤 제거/가독성 향상) ===== */
+  #layerPanel{
+    position:fixed;right:10px;top:10px;bottom:10px;
+    width:320px; /* 기존 280px → 넓혀서 줄바꿈 덜 나도록 */
+    max-width:min(360px,92vw);
+    z-index:11;background:rgba(255,255,255,.96);
+    border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.08);
+    display:flex;flex-direction:column;overflow:hidden; /* 패널 자체 가로 스크롤 차단 */
+  }
+  #layerPanel .header{
+    padding:8px 10px;border-bottom:1px solid #e5e7eb;
+    display:flex;gap:6px;align-items:center;justify-content:space-between;
+    min-width:0;
+  }
+
+  /* 리스트: 세로만 스크롤 */
+  #layerPanel .list{
+    overflow-y:auto;overflow-x:hidden; /* 가로 스크롤 제거 핵심 */
+    padding:8px;
+    scrollbar-gutter:stable both-edges; /* 스크롤바 생겨도 레이아웃 안 흔들리게 */
+  }
+
+  /* 아이템 레이아웃: 오버플로 방지 */
+  .layer-item{
+    border:1px solid #e5e7eb;border-radius:8px;padding:8px;margin-bottom:8px;background:#fff;
+    display:grid;
+    grid-template-columns:auto 1fr auto; /* 아이콘 / 내용 / 액션 */
+    grid-template-rows:auto auto;
+    grid-column-gap:6px;grid-row-gap:6px;
+    min-width:0; /* 내부 콘텐츠 줄바꿈 허용 */
+  }
+  .layer-item *{min-width:0} /* 모든 자식에 축소 허용 */
   .layer-item.active{outline:2px solid #3b82f6}
+
   .icons{display:flex;gap:6px}
-  .icons button{width:28px;height:28px;border-radius:6px}
-  .name-row{display:flex;gap:6px;align-items:center}
-  .name-row input{flex:1 1 auto;padding:4px 6px;border:1px solid #e5e7eb;border-radius:6px}
-  .row{display:flex;gap:6px;align-items:center}
-  .row select,.row input[type="range"]{flex:1}
-  .row .op{width:100%}
-  .layer-actions{display:flex;gap:6px}
+  .icons button{width:28px;height:28px;border-radius:6px;flex:0 0 auto}
+
+  .name-row{display:flex;gap:6px;align-items:center;min-width:0}
+  .name-row input{
+    flex:1 1 auto;min-width:0;width:100%;
+    padding:4px 6px;border:1px solid #e5e7eb;border-radius:6px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis; /* 긴 이름 … 처리 */
+  }
+
+  .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap} /* 좁을 때 줄바꿈 허용 */
+  .row select,.row input[type="range"]{
+    flex:1 1 140px; /* 최소 너비를 두고 공간 부족하면 줄바꿈 */
+    min-width:0;
+  }
+  .row .op{width:100%} /* 불투명도 슬라이더는 한 줄 꽉 채우기 */
+
+  .layer-actions{display:flex;gap:6px;flex:0 0 auto}
+
   .log{position:fixed;left:10px;top:66px;z-index:12;font:12px/1.2 ui-monospace,Consolas,monospace;color:#222}
   .pass{color:#1a7f37}.fail{color:#c62828}
+
+  /* 모바일/좁은 화면에서 패널을 하단 시트로 */
+  @media (max-width: 640px){
+    #layerPanel{
+      left:0;right:0;width:auto;top:auto;bottom:0;height:46vh;
+      border-radius:12px 12px 0 0;
+    }
+    .toolbar{left:8px;right:8px}
+  }
 </style>
 </head>
 <body>
-<div id="wrap"><canvas id="view"></canvas></div>
+<div id="wrap">
+  <canvas id="view"></canvas>
+  <canvas id="overlay"></canvas>
+</div>
 <div class="toolbar">
   <div class="group">
     <button data-tool="pencil">연필</button>
     <button data-tool="brush">붓</button>
     <button data-tool="eraser">지우개</button>
+    <button data-tool="transform">변형</button>
   </div>
   <div class="group">
     색상 <input id="color" type="color" value="#000000">
     두께 <input id="size" type="range" min="1" max="40" value="8">
+    <button id="addImageBtn">+ 사진</button>
     <button id="runTests">🧪 테스트</button>
   </div>
+  <div class="group small">Shift/Ctrl+드래그=스케일(위로 확대/아래로 축소) · Alt+드래그=회전 · [ / ] = 2° 회전</div>
 </div>
 <div id="layerPanel">
   <div class="header">
@@ -61,28 +123,35 @@
 <script>
 // === 표시 캔버스 ===
 const view=document.getElementById('view');
+const overlay=document.getElementById('overlay');
 const vctx=view.getContext('2d');
+const octx=overlay.getContext('2d');
 const dpr=window.devicePixelRatio||1;
 
 // === 레이어 모델 ===
-// L = {canvas, ctx, opacity, visible, locked, blend, name}
+// paint: {type:'paint', canvas, ctx, opacity, visible, locked, blend, name}
+// image: {type:'image', img, iw, ih, tx, ty, s, rot, opacity, visible, locked, blend, name}
 const layers=[]; let active=0; // active: 편집 중 레이어 인덱스(0 = 바닥)
 
 // === 도구 상태 ===
 let tool='brush', color='#000000', size=8, drawing=false, ctrl=false;
 let pts=[]; // 현재 스트로크 포인트 (CSS px)
+let draggingImage=null; // {startX,startY,mode:'move'|'scale'|'rotate', startS, startTX,startTY, startAngle, startRot}
 
 // === DPR 리사이즈 ===
 function fitCanvas(){
   const cw=view.clientWidth||window.innerWidth; const ch=view.clientHeight||window.innerHeight;
   const w=Math.max(1,Math.round(cw*dpr)); const h=Math.max(1,Math.round(ch*dpr));
   if(view.width!==w||view.height!==h){
-    view.width=w; view.height=h; vctx.setTransform(dpr,0,0,dpr,0,0);
+    view.width=w; view.height=h; overlay.width=w; overlay.height=h;
+    vctx.setTransform(dpr,0,0,dpr,0,0); octx.setTransform(dpr,0,0,dpr,0,0);
     for(const L of layers){
-      const old=document.createElement('canvas'); old.width=L.canvas.width; old.height=L.canvas.height;
-      old.getContext('2d').drawImage(L.canvas,0,0);
-      L.canvas.width=w; L.canvas.height=h; L.ctx=L.canvas.getContext('2d');
-      if(old.width&&old.height) L.ctx.drawImage(old,0,0,old.width,old.height,0,0,w,h);
+      if(L.type==='paint'){
+        const old=document.createElement('canvas'); old.width=L.canvas.width; old.height=L.canvas.height;
+        old.getContext('2d').drawImage(L.canvas,0,0);
+        L.canvas.width=w; L.canvas.height=h; L.ctx=L.canvas.getContext('2d');
+        if(old.width&&old.height) L.ctx.drawImage(old,0,0,old.width,old.height,0,0,w,h);
+      }
     }
     composite();
   }
@@ -91,16 +160,38 @@ function fitCanvas(){
 function makeLayer({opacity=1, visible=true, locked=false, blend='source-over', name='Layer'}={}){
   const c=document.createElement('canvas'); c.width=view.width; c.height=view.height;
   const ctx=c.getContext('2d');
-  return {canvas:c, ctx, opacity, visible, locked, blend, name};
+  return {type:'paint', canvas:c, ctx, opacity, visible, locked, blend, name};
+}
+function getImageSize(imgLike){ const iw=(imgLike.naturalWidth||imgLike.width||0); const ih=(imgLike.naturalHeight||imgLike.height||0); return {iw, ih}; }
+function makeImageLayer(imgLike, {opacity=1, visible=true, locked=false, blend='source-over', name='Image'}, iw, ih, tx, ty, s, rot){
+  const sz=getImageSize(imgLike); const _iw=iw||sz.iw; const _ih=ih||sz.ih; const safeIW=Math.max(1,_iw|0), safeIH=Math.max(1,_ih|0);
+  const initialScale = s ?? (Math.min(view.width/safeIW, view.height/safeIH)*0.9);
+  return {type:'image', img:imgLike, iw:safeIW, ih:safeIH, tx: tx??(view.width/2), ty: ty??(view.height/2), s:Math.max(0.01, initialScale), rot: (rot??0), opacity, visible, locked, blend, name};
 }
 
 function addInitial(){ if(layers.length) return; layers.push(makeLayer({opacity:1, name:'Layer 0'})); active=0; refreshLayerUI(); composite(); }
 
-// === 합성 ===
+// === 합성 + 오버레이 ===
 function composite(){
   vctx.save(); vctx.globalCompositeOperation='source-over'; vctx.globalAlpha=1; vctx.fillStyle='#fff'; vctx.fillRect(0,0,view.width,view.height);
-  for(const L of layers){ if(!L.visible) continue; vctx.globalAlpha=L.opacity; vctx.globalCompositeOperation=L.blend||'source-over'; vctx.drawImage(L.canvas,0,0); }
+  for(const L of layers){ if(!L.visible) continue; vctx.globalAlpha=L.opacity; vctx.globalCompositeOperation=L.blend||'source-over';
+    if(L.type==='image'){
+      vctx.save(); vctx.translate(L.tx,L.ty); vctx.rotate(L.rot||0);
+      vctx.drawImage(L.img, -(L.iw*L.s)/2, -(L.ih*L.s)/2, L.iw*L.s, L.ih*L.s); vctx.restore();
+    } else {
+      vctx.drawImage(L.canvas,0,0);
+    }
+  }
   vctx.restore();
+  drawOverlay();
+}
+function drawOverlay(){
+  octx.clearRect(0,0,overlay.width,overlay.height);
+  const L=layers[active]; if(!L||!L.visible||L.type!=='image') return;
+  const w=L.iw*L.s, h=L.ih*L.s; octx.save(); octx.translate(L.tx,L.ty); octx.rotate(L.rot||0);
+  octx.lineWidth=1; octx.setLineDash([6,4]); octx.strokeStyle='rgba(0,0,0,.85)'; octx.strokeRect(-w/2,-h/2,w,h);
+  const r=4; octx.setLineDash([]); octx.fillStyle='rgba(0,0,0,.85)'; [[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]].forEach(([x,y])=>{ octx.beginPath(); octx.arc(x,y,r,0,Math.PI*2); octx.fill(); });
+  octx.restore();
 }
 
 // === 상단 도구 ===
@@ -118,7 +209,6 @@ addThinBtn.addEventListener('click',()=>{ layers.push(makeLayer({opacity:0.3, na
 
 function refreshLayerUI(){
   listEl.innerHTML='';
-  // 상단(마지막 인덱스)이 화면에서 위에 보이도록 역순 렌더링
   for(let i=layers.length-1;i>=0;i--){
     const L=layers[i];
     const item=document.createElement('div');
@@ -130,7 +220,7 @@ function refreshLayerUI(){
         <button data-action="toggleLocked" title="잠금">${L.locked?'🔒':'🔓'}</button>
       </div>
       <div class="name-row" style="grid-column:2/3">
-        <input data-action="renameInput" type="text" value="${L.name?.replace(/"/g,'&quot;')||''}" />
+        <input data-action="renameInput" type="text" value="${L.name?.replace(/\"/g,'&quot;')||''}" />
         <button data-action="rename">변경</button>
       </div>
       <div class="layer-actions" style="grid-column:3/4">
@@ -163,9 +253,16 @@ listEl.addEventListener('click', (e)=>{
   if(act==='toggleVisible'){ L.visible=!L.visible; composite(); refreshLayerUI(); }
   else if(act==='toggleLocked'){ L.locked=!L.locked; refreshLayerUI(); }
   else if(act==='dup'){
-    const copy=makeLayer({opacity:L.opacity, visible:L.visible, locked:false, blend:L.blend, name:(L.name||`Layer ${i}`)+' copy'});
-    copy.ctx.drawImage(L.canvas,0,0);
-    layers.splice(i+1,0,copy); active=i+1; refreshLayerUI(); composite();
+    if(L.type==='image'){
+      const imgCanvas=document.createElement('canvas'); imgCanvas.width=L.iw; imgCanvas.height=L.ih; imgCanvas.getContext('2d').drawImage(L.img,0,0);
+      const copy=makeImageLayer(imgCanvas, {opacity:L.opacity, visible:L.visible, locked:false, blend:L.blend, name:(L.name||`Layer ${i}`)+' copy'}, L.iw, L.ih, L.tx+20, L.ty+20, L.s, L.rot);
+      layers.splice(i+1,0,copy);
+    }else{
+      const copy=makeLayer({opacity:L.opacity, visible:L.visible, locked:false, blend:L.blend, name:(L.name||`Layer ${i}`)+' copy'});
+      copy.ctx.drawImage(L.canvas,0,0);
+      layers.splice(i+1,0,copy);
+    }
+    active=i+1; refreshLayerUI(); composite();
   }
   else if(act==='del'){
     if(layers.length<=1) return; layers.splice(i,1); active=Math.max(0, Math.min(active, layers.length-1)); refreshLayerUI(); composite();
@@ -176,7 +273,7 @@ listEl.addEventListener('click', (e)=>{
   else if(act==='down'){
     if(i<=0) return; const tmp=layers[i]; layers[i]=layers[i-1]; layers[i-1]=tmp; active=(active===i)?i-1:active; refreshLayerUI(); composite();
   }
-  else if(act==='activate'){ active=i; refreshLayerUI(); }
+  else if(act==='activate'){ active=i; refreshLayerUI(); composite(); }
   else if(act==='rename'){
     const input=item.querySelector('input[data-action="renameInput"]'); L.name=input.value||L.name; refreshLayerUI();
   }
@@ -189,60 +286,61 @@ listEl.addEventListener('input',(e)=>{
   else if(act==='blend'){ L.blend=e.target.value; composite(); }
 });
 
+/* =========================
+   🔧 [ADD] 선 스타일 초기화 유틸
+   ========================= */
+function ensureSolidStroke(ctx){
+  if (ctx.getLineDash && ctx.getLineDash().length) ctx.setLineDash([]); // 점선 해제
+  // 기본값 보정(필요시)
+  ctx.lineCap  = ctx.lineCap  || 'round';
+  ctx.lineJoin = ctx.lineJoin || 'round';
+}
+
 // === 샘플링 유틸 (갭 제거) ===
-function strokeLineDense(ctx,a,b,w){
-  ctx.lineWidth=w; // [중요] 실제 선폭 적용
-  const dx=b.x-a.x, dy=b.y-a.y; const len=Math.hypot(dx,dy);
-  const stepLen=Math.max(0.5, w*0.35); const steps=Math.max(1, Math.ceil(len/stepLen));
-  ctx.beginPath(); ctx.moveTo(a.x,a.y);
-  for(let i=1;i<=steps;i++){ const t=i/steps; ctx.lineTo(a.x+dx*t, a.y+dy*t); }
+function strokeLineDense(ctx, a, b, w){
+  ensureSolidStroke(ctx);
+  ctx.lineWidth = w;
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);        // 더 이상 잘게 쪼개지 않음
   ctx.stroke();
 }
-function strokeQuadDense(ctx,p0,p1,p2,w){
-  ctx.lineWidth=w; // [중요] 실제 선폭 적용
-  const m1x=(p0.x+p1.x)/2, m1y=(p0.y+p1.y)/2; const m2x=(p1.x+p2.x)/2, m2y=(p1.y+p2.y)/2;
-  const dx=m2x-m1x, dy=m2y-m1y; const len=Math.hypot(dx,dy);
-  const stepLen=Math.max(0.5, w*0.35); const steps=Math.max(8, Math.ceil(len/stepLen));
-  ctx.beginPath(); ctx.moveTo(m1x,m1y);
-  for(let i=1;i<=steps;i++){
-    const t=i/steps;
-    const qx=(1-t)*(1-t)*m1x + 2*(1-t)*t*p1.x + t*t*m2x;
-    const qy=(1-t)*(1-t)*m1y + 2*(1-t)*t*p1.y + t*t*m2y;
-    ctx.lineTo(qx,qy);
-  }
+function strokeQuadDense(ctx, p0, p1, p2, w){
+  ensureSolidStroke(ctx);
+  ctx.lineWidth = w;
+
+  // 시작·끝점을 중점으로 두고, p1을 컨트롤 포인트로 사용하는 매끈한 1-세그먼트 곡선
+  const m1x = (p0.x + p1.x) / 2, m1y = (p0.y + p1.y) / 2;
+  const m2x = (p1.x + p2.x) / 2, m2y = (p1.y + p2.y) / 2;
+
+  ctx.beginPath();
+  ctx.moveTo(m1x, m1y);
+  ctx.quadraticCurveTo(p1.x, p1.y, m2x, m2y);
   ctx.stroke();
 }
 
 // === 연필 전용: 마지막 세그먼트만 미세 jitter 2패스로 렌더 ===
 function pencilStrokeSegment(ctx, pts, w){
-  const jitter=0.35, passes=2;
-  const n=pts.length; if(n<2) return;
+  const jitter=0.35, passes=2; const n=pts.length; if(n<2) return;
   for(let pass=0; pass<passes; pass++){
     const off=()=>({x:(Math.random()-0.5)*jitter, y:(Math.random()-0.5)*jitter});
-    if(n===2){
-      const a=pts[0], b=pts[1];
-      const o1=off(), o2=off();
-      strokeLineDense(ctx,{x:a.x+o1.x,y:a.y+o1.y},{x:b.x+o2.x,y:b.y+o2.y},w);
-    }else{
-      const p0=pts[n-3], p1=pts[n-2], p2=pts[n-1];
-      const o0=off(), o1=off(), o2=off();
-      strokeQuadDense(ctx,
-        {x:p0.x+o0.x,y:p0.y+o0.y},
-        {x:p1.x+o1.x,y:p1.y+o1.y},
-        {x:p2.x+o2.x,y:p2.y+o2.y}, w);
-    }
+    if(n===2){ const a=pts[0], b=pts[1]; const o1=off(), o2=off(); strokeLineDense(ctx,{x:a.x+o1.x,y:a.y+o1.y},{x:b.x+o2.x,y:b.y+o2.y},w); }
+    else { const p0=pts[n-3], p1=pts[n-2], p2=pts[n-1]; const o0=off(), o1=off(), o2=off(); strokeQuadDense(ctx,{x:p0.x+o0.x,y:p0.y+o0.y},{x:p1.x+o1.x,y:p1.y+o1.y},{x:p2.x+o2.x,y:p2.y+o2.y}, w); }
   }
 }
 
-// === 드로잉 ===
-function activeCtx(){ return layers[active].ctx; }
+// === 드로잉 & 변형 ===
+function activeCtx(){ return layers[active]?.type==='paint' ? layers[active].ctx : null; }
+function toLocal(e){ const r=view.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+
 function draw(x,y,start){
   const L=layers[active]; if(!L || L.locked || !L.visible) return; // 잠금/비가시 레이어 보호
+  if(L.type==='image') return; // 이미지 레이어는 직접 그리지 않음
   const ctx=activeCtx();
 
   if(tool==='eraser'){
     const w=size*(ctrl?1.5:1);
-    ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle=color; ctx.globalCompositeOperation='destination-out';
+    ctx.lineCap='round'; ctx.lineJoin='round'; ctx.globalCompositeOperation='destination-out';
     if(start||pts.length===0){ pts=[{x,y}]; ctx.beginPath(); ctx.arc(x,y,w/2,0,Math.PI*2); ctx.fill(); composite(); return; }
     const a=pts[pts.length-1]; const dx=x-a.x, dy=y-a.y; const len=Math.hypot(dx,dy);
     const stepLen=Math.max(0.5, w*0.4); const steps=Math.max(1, Math.ceil(len/stepLen));
@@ -258,7 +356,10 @@ function draw(x,y,start){
   if(tool==='pencil'){
     // 연필: 선명(α=1), 얇음(최대 3px), 미세 질감(jitter)
     const w=Math.max(1, Math.min(size*(ctrl?1.5:1), 3));
-    ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle=color;
+    ensureSolidStroke(ctx);             // 안전장치
+    ctx.lineCap='round';                // 연필은 라운드 유지
+    ctx.lineJoin='round';
+    ctx.strokeStyle=color;
     ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
     pencilStrokeSegment(ctx, pts, w);
     composite();
@@ -273,8 +374,11 @@ function draw(x,y,start){
     const widen=1 + Math.min(speed/28, 0.6);
     w = Math.max(1, w*widen);
 
-    ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle=color;
-    ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=0.55;
+    ensureSolidStroke(ctx);             // 🔧 [ADD] 점선/상태 초기화
+   ctx.lineCap='round';                  // 🔧 [FIX] 라운드 캡 겹침으로 생기던 점 제거
+    ctx.lineJoin='round';
+    ctx.strokeStyle=color;
+    ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
 
     const n=pts.length;
     if(n===2) strokeLineDense(ctx,pts[0],pts[1],w);
@@ -284,22 +388,79 @@ function draw(x,y,start){
   }
 }
 
+// === 변형 입력 ===
+function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
+function computeScale(startS, dy){
+  // 위로 드래그(음수 dy) = 확대, 아래로(양수 dy) = 축소
+  return clamp(startS * (1 - dy*0.005), 0.05, 10);
+}
+function startTransform(e){
+  const L=layers[active]; if(!L||L.type!=='image'||L.locked||!L.visible) return; const p=toLocal(e);
+  // 회전 고려한 hit-test
+  const dx=p.x-L.tx, dy=p.y-L.ty; const c=Math.cos(-(L.rot||0)), s=Math.sin(-(L.rot||0));
+  const rx=dx*c - dy*s, ry=dx*s + dy*c; const w=L.iw*L.s, h=L.ih*L.s;
+  const inside=(rx>=-w/2 && rx<=w/2 && ry>=-h/2 && ry<=h/2); if(!inside) return;
+  const angle=Math.atan2(p.y-L.ty, p.x-L.tx);
+  draggingImage={ startX:p.x, startY:p.y, mode:(e.altKey?'rotate':(e.shiftKey||e.ctrlKey)?'scale':'move'), startS:L.s, startTX:L.tx, startTY:L.ty, startAngle:angle, startRot:(L.rot||0) };
+}
+function moveTransform(e){ if(!draggingImage) return; const L=layers[active]; const p=toLocal(e);
+  if(draggingImage.mode==='move'){
+    L.tx = draggingImage.startTX + (p.x - draggingImage.startX);
+    L.ty = draggingImage.startTY + (p.y - draggingImage.startY);
+  } else if(draggingImage.mode==='scale'){
+    const dy = (p.y - draggingImage.startY);
+    L.s = computeScale(draggingImage.startS, dy); // 위=확대, 아래=축소
+  } else { // rotate
+    const ang=Math.atan2(p.y-L.ty, p.x-L.tx);
+    L.rot = draggingImage.startRot + (ang - draggingImage.startAngle);
+  }
+  composite();
+}
+function endTransform(){ draggingImage=null; }
+
 // === 포인터 ===
-function toLocal(e){ const r=view.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
-view.addEventListener('pointerdown', e=>{ e.preventDefault(); drawing=true; pts=[]; const p=toLocal(e); try{ view.setPointerCapture && view.setPointerCapture(e.pointerId);}catch(_){} draw(p.x,p.y,true); });
-view.addEventListener('pointermove', e=>{ if(!drawing) return; e.preventDefault(); const p=toLocal(e); draw(p.x,p.y,false); });
-window.addEventListener('pointerup', ()=>{ drawing=false; pts=[]; });
-window.addEventListener('pointercancel', ()=>{ drawing=false; pts=[]; });
+function toLocalEvent(e){ const r=view.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+view.addEventListener('pointerdown', e=>{
+  e.preventDefault();
+  if(tool==='transform'){ startTransform(e); return; }
+  drawing=true; pts=[]; const p=toLocalEvent(e); try{ view.setPointerCapture && view.setPointerCapture(e.pointerId);}catch(_){} draw(p.x,p.y,true);
+});
+view.addEventListener('pointermove', e=>{ if(tool==='transform'){ moveTransform(e); return; } if(!drawing) return; e.preventDefault(); const p=toLocalEvent(e); draw(p.x,p.y,false); });
+window.addEventListener('pointerup', ()=>{ if(tool==='transform'){ endTransform(); } drawing=false; pts=[]; });
+window.addEventListener('pointercancel', ()=>{ if(tool==='transform'){ endTransform(); } drawing=false; pts=[]; });
 window.addEventListener('resize', fitCanvas);
 
-// === 테스트 (간단) ===
+// === 이미지 불러오기 ===
+const addImageBtn=document.getElementById('addImageBtn');
+const imgInput=document.createElement('input'); imgInput.type='file'; imgInput.accept='image/*'; imgInput.style.display='none'; document.body.appendChild(imgInput);
+addImageBtn.addEventListener('click',()=>imgInput.click());
+imgInput.addEventListener('change', async (e)=>{
+  const file=e.target.files && e.target.files[0]; if(!file) return;
+  try{
+    const bmp = await createImageBitmap(file);
+    const L = makeImageLayer(bmp, {opacity:1, name:file.name||'Image'});
+    L.s = Math.min(view.width/(L.iw||1), view.height/(L.ih||1))*0.9; L.tx=view.width/2; L.ty=view.height/2;
+    layers.push(L); active=layers.length-1; refreshLayerUI(); composite();
+  }catch(err){
+    const url=URL.createObjectURL(file); const img=new Image();
+    img.onload=()=>{ const {naturalWidth, naturalHeight}=img; const L=makeImageLayer(img, {opacity:1, name:file.name||'Image'}, naturalWidth, naturalHeight); L.tx=view.width/2; L.ty=view.height/2; layers.push(L); active=layers.length-1; refreshLayerUI(); composite(); URL.revokeObjectURL(url); };
+    img.onerror=()=>{ URL.revokeObjectURL(url); };
+    img.src=url;
+  }
+  e.target.value='';
+});
+
+// === 테스트 (간단 + 이미지/스케일 방향) ===
 const testlog=document.getElementById('testlog');
 function log(ok,msg){ const div=document.createElement('div'); div.className=ok?'pass':'fail'; div.textContent=(ok?'✓ ':'✗ ')+msg; testlog.appendChild(div); }
 function runTests(){
   testlog.innerHTML='';
   try{ setTool('pencil'); size=2; document.getElementById('size').value=size; log(true,'연필 준비'); }catch(e){ log(false,'연필 준비 실패: '+e.message); }
   try{ setTool('brush'); size=8; document.getElementById('size').value=size; log(true,'붓 준비'); }catch(e){ log(false,'붓 준비 실패: '+e.message); }
+  try{ const off=document.createElement('canvas'); off.width=120; off.height=90; const oc=off.getContext('2d'); oc.fillStyle='#ff0000'; oc.fillRect(0,0,120,90); const L=makeImageLayer(off,{opacity:1,name:'off'},120,90,view.width/2,view.height/2,1,0); layers.push(L); active=layers.length-1; composite(); log(true,'이미지 레이어 렌더 OK'); }catch(e){ log(false,'이미지 레이어 실패: '+e.message); }
+  try{ const s0=1; const sUp=computeScale(s0,-100); const sDown=computeScale(s0,100); log(sUp>s0 && sDown<s0, '스케일 방향(위=확대) OK'); }catch(e){ log(false,'스케일 방향 예외: '+e.message); }
 }
+
 document.getElementById('runTests').addEventListener('click', runTests);
 
 // === 시작 ===
