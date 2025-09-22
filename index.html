@@ -28,8 +28,7 @@ body{
   font:16px/1.6 system-ui, Segoe UI, Roboto, "Apple SD Gothic Neo","Noto Sans KR", sans-serif;
   color:var(--text);
   min-height:100%;
-  /* 사이드바 폭 + 여백 */
-  padding:24px 24px 24px 260px;
+  padding:24px 24px 24px 260px; /* 사이드바 폭 + 여백 */
 }
 
 /* 배경 캔버스 */
@@ -46,7 +45,6 @@ body{
 /* =========================================================
    2) LAYOUT
    ========================================================= */
-/* 사이드바 */
 .sidebar{
   position:fixed; top:0; left:0; height:100%; width:236px;
   background:rgba(0,0,0,.35);
@@ -58,7 +56,6 @@ body{
 .sidebar h2{ font-size:20px; margin-bottom:14px; }
 .cats{ display:flex; flex-direction:column; gap:8px; }
 
-/* 메인 캔버스 */
 .canvas{
   max-width:1280px; margin:0 auto;
   background:rgba(255,255,255,.06);
@@ -68,7 +65,6 @@ body{
   box-shadow:0 12px 40px rgba(0,0,0,.25);
 }
 
-/* 좌/우 컬럼 */
 .columns{
   display:grid; gap:22px;
   grid-template-columns:58% 42%;
@@ -77,7 +73,6 @@ body{
 /* =========================================================
    3) COMPONENTS
    ========================================================= */
-/* 카테고리 버튼 */
 .cat{
   display:block; width:100%;
   color:#fff; background:transparent;
@@ -92,7 +87,6 @@ body{
   color:#001018; border-color:transparent;
 }
 
-/* 워크스페이스 헤더/그리드 */
 .workspace .head{
   display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;
 }
@@ -102,21 +96,41 @@ body{
   grid-template-columns:repeat(2,minmax(0,1fr));
 }
 
-/* 개별 카드 */
+/* 카드 (썸네일 레이아웃) */
+/* 🔻 썸네일 */
 .cardlet{
   display:block; text-decoration:none;
   background:#fff; color:#0b1220;
   border:1px solid rgba(0,0,0,.08);
-  border-radius:14px; padding:16px; min-height:130px;
+  border-radius:14px; overflow:hidden; /* 썸네일 라운드 */
+  min-height:150px;
   box-shadow:0 8px 20px rgba(0,0,0,.12);
   transition:transform .15s ease, box-shadow .15s ease;
 }
-.cardlet:hover{
-  transform:translateY(-2px);
-  box-shadow:0 12px 28px rgba(0,0,0,.16);
+.cardlet:hover{ transform:translateY(-2px); box-shadow:0 12px 28px rgba(0,0,0,.16); }
+
+.cardlet__thumb{
+  position:relative;
+  width:100%; aspect-ratio:16/9; /* 일정한 비율로 썸네일 */
+  background:linear-gradient(135deg,#e2e8f0,#cbd5e1);
+  overflow:hidden;
 }
-.cardlet h4{ margin:0 0 6px; font-size:18px; }
-.cardlet p{ margin:0; color:#475569; font-size:14px; }
+.cardlet__thumb img{
+  width:100%; height:100%; object-fit:cover; display:block;
+}
+
+.cardlet__body{
+  padding:14px 16px;
+}
+.cardlet__title{ margin:0 0 6px; font-size:18px; font-weight:700; }
+.cardlet__desc{ margin:0; color:#475569; font-size:14px; }
+
+/* 썸네일 플레이스홀더(이미지 없을 때) */
+.thumb-fallback{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:18px; color:#0b1220;
+  background:linear-gradient(135deg,#dbeafe,#bcf0da);
+}
 
 /* 안내(빈 상태) */
 .empty{
@@ -127,7 +141,7 @@ body{
   background:rgba(255,255,255,.6);
 }
 
-/* 소개/설명 블록 */
+/* 블록 */
 .block{
   background:#fff; color:#0b1220;
   border:1px solid rgba(0,0,0,.08);
@@ -141,16 +155,11 @@ body{
 /* 푸터 */
 footer{ margin-top:14px; text-align:center; color:var(--muted); }
 
-/* =========================================================
-   4) STATE / MODE
-   ========================================================= */
-/* 사이드바 카테고리 클릭 시: 소개 숨기고 워크스페이스만 */
+/* 상태 */
 .workspace-only .columns{ grid-template-columns:1fr; }
 .workspace-only .left{ display:none; }
 
-/* =========================================================
-   5) RESPONSIVE
-   ========================================================= */
+/* 반응형 */
 @media (max-width:980px){
   .columns{ grid-template-columns:1fr; }
 }
@@ -164,6 +173,25 @@ footer{ margin-top:14px; text-align:center; color:var(--muted); }
     margin-bottom:12px;
   }
   .canvas{ padding:16px; }
+}
+
+/* 배경음악 컨트롤 */
+.audioctl{
+  margin-top:14px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.audioctl .vol{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#e5e7eb;
+  font-size:12px;
+}
+.audioctl input[type="range"]{
+  width:100%;
+  accent-color: var(--accent);
 }
 </style>
 </head>
@@ -180,6 +208,20 @@ footer{ margin-top:14px; text-align:center; color:var(--muted); }
     <button class="cat" data-cat="게임">게임</button>
     <button class="cat" data-cat="그림">그림</button>
     <button class="cat" data-cat="기타">기타</button>
+  </div>
+
+  <!-- 배경음악 컨트롤 -->
+  <div class="audioctl">
+    <button id="music-toggle" class="cat" type="button">🎵 배경음악 재생</button>
+    <div class="vol">
+      <label for="music-vol">볼륨</label>
+      <input id="music-vol" type="range" min="0" max="1" step="0.01" value="0.4" />
+    </div>
+    <div class="vol" style="margin-top:4px">
+   <label for="music-track">트랙</label>
+   <select id="music-track"></select>
+</div>
+
   </div>
 </aside>
 
@@ -288,31 +330,67 @@ footer{ margin-top:14px; text-align:center; color:var(--muted); }
   window.addEventListener('resize', () => { resize(); drawBaseImage(); });
 })();
 
-/* ===== Items & Category Filter ===== */
+/* ===== Items & Category Filter (with thumbnails) ===== */
+/* 썸네일 경로는 실제 저장 위치로 맞춰주세요. */
 const items = [
-  { title:'GitHub', desc:'소스와 저장소', href:'https://github.com/ezekiel123581-cell', cat:'기타' },
-  { title:'시각예술시뮬레이터', desc:'시각 실험 데모', href:'./simulator.html', cat:'그림' },
-
-  // GPT buttons
+  {
+    title:'GitHub',
+    desc:'소스와 저장소',
+    href:'https://github.com/ezekiel123581-cell',
+    cat:'기타',
+    thumb:'https://ezekiel123581-cell.github.io/images/img5.png'   // GitHub → img 5
+  },
+  {
+    title:'시각예술시뮬레이터',
+    desc:'시각 실험 데모',
+    href:'./simulator.html',
+    cat:'그림',
+    thumb:'https://ezekiel123581-cell.github.io/images/img3.png'   // 시각 → img 3
+  },
   {
     title:'GPT · 지구 칵테일',
     desc:'나만의 GPT – 지구 칵테일',
     href:'https://chatgpt.com/g/g-68b834ee2d4c8191b9ce84960a9aeda8-jigu-kagteil',
-    cat:'기타'
+    cat:'기타',
+    thumb:'https://ezekiel123581-cell.github.io/images/img2.png'   // 지구 칵테일 → img 2
   },
   {
     title:'GPT · 요리 레시피를 알려주는 쥐',
     desc:'나만의 GPT – 요리 도우미',
     href:'https://chatgpt.com/g/g-68b81a61f75c8191a19abbbe0d553797-yoriresipireul-alryeojuneun-jwi',
-    cat:'기타'
+    cat:'기타',
+    thumb:'https://ezekiel123581-cell.github.io/images/img1.png'   // 쥐 → img 1
   },
-
-  { title:'게임 프로토타입(준비중)', desc:'추가 예정', href:'#', cat:'게임', disabled:true },
-  { title:'드로잉 · Grim', desc:'캔버스 드로잉 데모', href:'./Grim.html', cat:'그림' }
+  {
+    title:'게임 프로토타입(준비중)',
+    desc:'추가 예정',
+    href:'#',
+    cat:'게임',
+    disabled:true,
+    thumb:'https://ezekiel123581-cell.github.io/images/img6.png'   // 프로토 → img 6
+  },
+  {
+    title:'드로잉 · Grim',
+    desc:'캔버스 드로잉 데모',
+    href:'./Grim.html',
+    cat:'그림',
+    thumb:'https://ezekiel123581-cell.github.io/images/img4.png'   // 드로잉 → img 4
+  }
 ];
+
 
 const grid  = document.getElementById('grid');
 const title = document.getElementById('ws-title');
+
+function makePlaceholder(text=''){
+  // 카드 제목 이니셜 2자 정도 추출
+  const t = text.trim().replace(/^GPT\s*·\s*/i,'');
+  const initials = Array.from(t).filter(ch=>/\p{L}/u.test(ch)).slice(0,2).join('').toUpperCase() || 'WS';
+  const div = document.createElement('div');
+  div.className = 'thumb-fallback';
+  div.textContent = initials;
+  return div;
+}
 
 function render(category='전체'){
   grid.innerHTML='';
@@ -324,20 +402,211 @@ function render(category='전체'){
   }
 
   filtered.forEach(it=>{
-    const a=document.createElement('a');
-    a.className='cardlet';
-    a.innerHTML=`<h4>${it.title}</h4><p>${it.desc}</p>`;
-    if(it.disabled){
-      a.href='javascript:void(0)';
-      a.style.opacity=.6;
-      a.style.pointerEvents='none';
+    const a = document.createElement('a');
+    a.className = 'cardlet';
+
+    // 썸네일 영역
+    const thumbWrap = document.createElement('div');
+    thumbWrap.className = 'cardlet__thumb';
+
+    if (it.thumb){
+      const img = document.createElement('img');
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.alt = `${it.title} 미리보기`;
+      img.src = it.thumb;
+      // 이미지 로드 에러 시 플레이스홀더로 대체
+      img.addEventListener('error', ()=>{
+        thumbWrap.innerHTML = '';
+        thumbWrap.appendChild(makePlaceholder(it.title));
+      });
+      thumbWrap.appendChild(img);
     } else {
-      a.href=it.href;
-      a.target='_blank';
-      a.rel='noopener';
+      thumbWrap.appendChild(makePlaceholder(it.title));
     }
+
+    // 텍스트 영역
+    const body = document.createElement('div');
+    body.className = 'cardlet__body';
+    body.innerHTML = `<h4 class="cardlet__title">${it.title}</h4><p class="cardlet__desc">${it.desc}</p>`;
+
+    // 상태/링크
+    if(it.disabled){
+      a.href = 'javascript:void(0)';
+      a.style.opacity = .6;
+      a.style.pointerEvents = 'none';
+    } else {
+      a.href = it.href;
+      a.target = '_blank';
+      a.rel = 'noopener';
+    }
+
+    // 조립
+    a.appendChild(thumbWrap);
+    a.appendChild(body);
     grid.appendChild(a);
   });
+
+  title.textContent = `workspace · ${category}`;
+}
+render('전체');
+// 초기엔 소개 보이도록 유지
+document.body.classList.remove('workspace-only');
+
+document.querySelectorAll('.cat').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.cat').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const cat = btn.dataset.cat;
+    render(cat);
+
+    // '전체'는 소개 보이고, 나머지는 워크스페이스만
+    if (cat === '전체') {
+      document.body.classList.remove('workspace-only');
+    } else {
+      document.body.classList.add('workspace-only');
+    }
+  });
+});
+
+/* ===== Background Music ===== */
+/* ===== Background Music: Playlist (Repeat-All) ===== */
+const AUDIO_BASE = 'https://ezekiel123581-cell.github.io/audio/'; // <- 네 오디오 폴더 URL로 수정
+
+const FILENAMES = [
+  'Untitled (1).mp3',
+  'Untitled.mp3',
+  '君の中にある赤い線と青い線 (1).mp3',
+  '君の中にある赤い線と青い線.mp3',
+  '君の中にある赤い線と青い線 (3).mp3',
+  '君の中にある赤い線と青い線 (2).mp3',
+  'The red line and blue line within you.mp3',
+  'The red line and blue line within you (1).mp3'
+];
+
+const PLAYLIST = FILENAMES.map(name => ({
+  title: name.replace(/\.mp3$/i, ''),
+  src: encodeURI(AUDIO_BASE + name)
+}));
+
+let currentIndex = Math.min(
+  Math.max(parseInt(localStorage.getItem('bgmIndex') ?? '0', 10) || 0, 0),
+  PLAYLIST.length - 1
+);
+
+const savedVol = parseFloat(localStorage.getItem('bgmVol') ?? '0.4');
+const savedOn  = localStorage.getItem('bgmOn') === '1';
+
+const bgm = new Audio(PLAYLIST[currentIndex].src);
+bgm.loop = false;          // 한 곡 반복 X (플레이리스트 반복으로 처리)
+bgm.preload = 'auto';
+bgm.volume = Number.isFinite(savedVol) ? savedVol : 0.4;
+
+const $toggle = document.getElementById('music-toggle');
+const $vol    = document.getElementById('music-vol');
+const $track  = document.getElementById('music-track');
+
+if ($vol) $vol.value = String(bgm.volume);
+if ($track){
+  $track.innerHTML = PLAYLIST.map((t, i)=> `<option value="${i}">${t.title}</option>`).join('');
+  $track.value = String(currentIndex);
+}
+
+function fadeTo(target = 1, ms = 500){
+  const steps = 24, dt = ms / steps;
+  const start = bgm.volume;
+  let i = 0;
+  const timer = setInterval(()=>{
+    i++;
+    bgm.volume = Math.min(1, Math.max(0, start + (target - start) * (i/steps)));
+    if (i >= steps) clearInterval(timer);
+  }, dt);
+}
+
+async function setTrack(index, { autoplay = false } = {}){
+  currentIndex = (index + PLAYLIST.length) % PLAYLIST.length; // 순환
+  localStorage.setItem('bgmIndex', String(currentIndex));
+
+  const keepVolume = bgm.volume;
+  const wasPlaying = autoplay || !bgm.paused;
+
+  try { bgm.pause(); } catch(_) {}
+  bgm.src = PLAYLIST[currentIndex].src + '?v=' + Date.now(); // 캐시 회피
+  bgm.currentTime = 0;
+  bgm.volume = keepVolume;
+
+  if ($track) $track.value = String(currentIndex);
+
+  if (wasPlaying) {
+    try {
+      await bgm.play();
+      fadeTo(keepVolume, 300);
+      if ($toggle) $toggle.textContent = '⏸ 배경음악 일시정지';
+    } catch(e) {
+      console.warn(e);
+    }
+  }
+}
+
+function nextTrack(){ setTrack(currentIndex + 1, { autoplay: !bgm.paused }); }
+function prevTrack(){ setTrack(currentIndex - 1, { autoplay: !bgm.paused }); }
+
+bgm.addEventListener('ended', nextTrack);  // 한 곡 끝나면 다음 곡 → 끝나면 처음으로
+
+async function playBgm(){
+  try{
+    if (bgm.currentTime === 0) { await bgm.play().catch(()=>{}); bgm.pause(); }
+    await bgm.play();
+    fadeTo(parseFloat($vol?.value ?? '0.4'), 300);
+    if ($toggle) $toggle.textContent = '⏸ 배경음악 일시정지';
+    localStorage.setItem('bgmOn','1');
+  }catch(e){
+    console.warn('Autoplay blocked:', e);
+  }
+}
+function pauseBgm(){
+  fadeTo(0, 250);
+  setTimeout(()=>bgm.pause(), 260);
+  if ($toggle) $toggle.textContent = '🎵 배경음악 재생';
+  localStorage.setItem('bgmOn','0');
+}
+
+$toggle?.addEventListener('click', ()=> (bgm.paused ? playBgm() : pauseBgm()) );
+$vol?.addEventListener('input', (e)=>{
+  const v = parseFloat(e.target.value);
+  bgm.volume = v;
+  localStorage.setItem('bgmVol', String(v));
+});
+$track?.addEventListener('change', (e)=>{
+  const i = parseInt(e.target.value, 10) || 0;
+  setTrack(i, { autoplay: !bgm.paused });
+});
+
+let wasPlaying = false;
+document.addEventListener('visibilitychange', ()=>{
+  if (document.hidden){
+    wasPlaying = !bgm.paused;
+    if (wasPlaying) pauseBgm();
+  } else {
+    if (wasPlaying) playBgm();
+  }
+});
+
+if (savedOn){
+  const unlock = () => {
+    if (bgm.paused) playBgm();
+    window.removeEventListener('pointerdown', unlock, { once:true });
+    window.removeEventListener('keydown',  unlock, { once:true });
+  };
+  window.addEventListener('pointerdown', unlock, { once:true });
+  window.addEventListener('keydown',  unlock, { once:true });
+  if ($toggle) $toggle.textContent = '⏸ 배경음악 일시정지';
+}
+
+</script>
+</body>
+</html>
 
   title.textContent = `workspace · ${category}`;
 }
