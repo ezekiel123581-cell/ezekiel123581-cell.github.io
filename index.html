@@ -3,16 +3,6 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<script>
-// 페이지가 사용자/프로젝트 페이지 어느 쪽이든 안전하게 베이스 계산
- const SITE_BASE = (() => {
-   const parts = location.pathname.split('/').filter(Boolean);
-   // 첫 조각이 파일명(index.html 등)이면 루트로 간주
-   if (parts.length === 0 || (parts[0] && parts[0].includes('.'))) return '/';
-  return '/' + parts[0] + '/';
- })();
-cconst thumbUrl = (filename) => THUMB_BASE + encodeURIComponent(filename);   // ← 깃허브의 /thumb 폴더
-</script>
 
 <title>김은석 · Workspace</title>
 <meta name="description" content="개인 포트폴리오 & 워크스페이스" />
@@ -380,7 +370,7 @@ var items = [
     desc:'나만의 GPT – 요리 도우미',
     href:'https://chatgpt.com/g/g-68b81a61f75c8191a19abbbe0d553797-yoriresipireul-alryeojuneun-jwi',
     cat:'기타',
-    thumb: THUMB_BASE + 'img1.jpg'  // 쥐 → img 1
+    thumb: 'https://ezekiel123581-cell.github.io/thumb/img%201.JPG'
   },
   {
     title:'게임 프로토타입(준비중)',
