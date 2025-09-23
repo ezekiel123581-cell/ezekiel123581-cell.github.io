@@ -3,6 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<script>
+// 페이지가 사용자/프로젝트 페이지 어느 쪽이든 안전하게 베이스 계산
+const SITE_BASE = (function(){
+  const parts = location.pathname.split('/').filter(Boolean);
+  return parts.length ? '/' + parts[0] + '/' : '/';
+})();
+const THUMB_BASE = SITE_BASE + 'thumb/';   // ← 깃허브의 /thumb 폴더
+</script>
+
 <title>김은석 · Workspace</title>
 <meta name="description" content="개인 포트폴리오 & 워크스페이스" />
 
@@ -348,28 +357,28 @@ var items = [
     desc:'소스와 저장소',
     href:'https://github.com/ezekiel123581-cell',
     cat:'기타',
-    thumb:'https://ezekiel123581-cell.github.io/images/img5.jpg'   // GitHub → img 5
+      thumb: THUMB_BASE + 'img5.jpg'
   },
   {
     title:'시각예술시뮬레이터',
     desc:'시각 실험 데모',
     href:'./simulator.html',
     cat:'그림',
-    thumb:'https://ezekiel123581-cell.github.io/images/img3.jpg'   // 시각 → img 3
+     thumb: THUMB_BASE + 'img3.jpg'
   },
   {
     title:'GPT · 지구 칵테일',
     desc:'나만의 GPT – 지구 칵테일',
     href:'https://chatgpt.com/g/g-68b834ee2d4c8191b9ce84960a9aeda8-jigu-kagteil',
     cat:'기타',
-    thumb:'https://ezekiel123581-cell.github.io/images/img2.jpg'   // 지구 칵테일 → img 2
+      thumb: THUMB_BASE + 'img2.jpg'
   },
   {
     title:'GPT · 요리 레시피를 알려주는 쥐',
     desc:'나만의 GPT – 요리 도우미',
     href:'https://chatgpt.com/g/g-68b81a61f75c8191a19abbbe0d553797-yoriresipireul-alryeojuneun-jwi',
     cat:'기타',
-    thumb:'https://ezekiel123581-cell.github.io/images/img1.jpg'   // 쥐 → img 1
+    thumb: THUMB_BASE + 'img1.jpg'  // 쥐 → img 1
   },
   {
     title:'게임 프로토타입(준비중)',
@@ -377,14 +386,14 @@ var items = [
     href:'#',
     cat:'게임',
     disabled:true,
-    thumb:'https://ezekiel123581-cell.github.io/images/img6.jpg'   // 프로토 → img 6
+    thumb: THUMB_BASE + 'img6.jpg'   // 프로토 → img 6
   },
   {
     title:'드로잉 · Grim',
     desc:'캔버스 드로잉 데모',
     href:'./Grim.html',
     cat:'그림',
-    thumb:'https://ezekiel123581-cell.github.io/images/img4.jpg'   // 드로잉 → img 4
+    thumb: THUMB_BASE + 'img4.jpg'   // 드로잉 → img 4
   }
 ];
 
