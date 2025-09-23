@@ -3,17 +3,6 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<script>
-const SITE_BASE = (() => {
-  const parts = location.pathname.split('/').filter(Boolean);
-  if (parts.length === 0 || (parts[0] && parts[0].includes('.'))) return '/';
-  return '/' + parts[0] + '/';
-})();
-const THUMB_BASE = 'thumb/'; // 현재 HTML 기준 상대경로로 유지
-
-// 파일명만 안전하게 인코딩해서 붙이기
-const thumbUrl = (filename) => THUMB_BASE + encodeURIComponent(filename);
-</script>
 <title>김은석 · Workspace</title>
 <meta name="description" content="개인 포트폴리오 & 워크스페이스" />
 
@@ -39,7 +28,8 @@ body{
   font:16px/1.6 system-ui, Segoe UI, Roboto, "Apple SD Gothic Neo","Noto Sans KR", sans-serif;
   color:var(--text);
   min-height:100%;
-  padding:24px 24px 24px 260px; /* 사이드바 폭 + 여백 */
+  /* 사이드바 폭 + 여백 */
+  padding:24px 24px 24px 260px;
 }
 
 /* 배경 캔버스 */
@@ -56,6 +46,7 @@ body{
 /* =========================================================
    2) LAYOUT
    ========================================================= */
+/* 사이드바 */
 .sidebar{
   position:fixed; top:0; left:0; height:100%; width:236px;
   background:rgba(0,0,0,.35);
@@ -67,13 +58,7 @@ body{
 .sidebar h2{ font-size:20px; margin-bottom:14px; }
 .cats{ display:flex; flex-direction:column; gap:8px; }
 
-/* width/flex overrides so audio controls don't overflow */
-.cats .cat{ width:100%; }
-.audioctl .row{ display:flex; gap:8px; }
-.audioctl .row .cat{ width:auto; flex:1 1 0; }
-.audioctl select{ width:100%; max-width:100%; }
-.audioctl .vol label{ white-space:nowrap; }
-
+/* 메인 캔버스 */
 .canvas{
   max-width:1280px; margin:0 auto;
   background:rgba(255,255,255,.06);
@@ -83,6 +68,7 @@ body{
   box-shadow:0 12px 40px rgba(0,0,0,.25);
 }
 
+/* 좌/우 컬럼 */
 .columns{
   display:grid; gap:22px;
   grid-template-columns:58% 42%;
@@ -91,8 +77,9 @@ body{
 /* =========================================================
    3) COMPONENTS
    ========================================================= */
+/* 카테고리 버튼 */
 .cat{
-  display:block;
+  display:block; width:100%;
   color:#fff; background:transparent;
   border:1px solid rgba(255,255,255,.25);
   padding:10px 12px; border-radius:10px; font-weight:800;
@@ -105,6 +92,7 @@ body{
   color:#001018; border-color:transparent;
 }
 
+/* 워크스페이스 헤더/그리드 */
 .workspace .head{
   display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;
 }
@@ -114,41 +102,21 @@ body{
   grid-template-columns:repeat(2,minmax(0,1fr));
 }
 
-/* 카드 (썸네일 레이아웃) */
-/* 🔻 썸네일 */
+/* 개별 카드 */
 .cardlet{
   display:block; text-decoration:none;
   background:#fff; color:#0b1220;
   border:1px solid rgba(0,0,0,.08);
-  border-radius:14px; overflow:hidden; /* 썸네일 라운드 */
-  min-height:150px;
+  border-radius:14px; padding:16px; min-height:130px;
   box-shadow:0 8px 20px rgba(0,0,0,.12);
   transition:transform .15s ease, box-shadow .15s ease;
 }
-.cardlet:hover{ transform:translateY(-2px); box-shadow:0 12px 28px rgba(0,0,0,.16); }
-
-.cardlet__thumb{
-  position:relative;
-  width:100%; aspect-ratio:16/9; /* 일정한 비율로 썸네일 */
-  background:linear-gradient(135deg,#e2e8f0,#cbd5e1);
-  overflow:hidden;
+.cardlet:hover{
+  transform:translateY(-2px);
+  box-shadow:0 12px 28px rgba(0,0,0,.16);
 }
-.cardlet__thumb img{
-  width:100%; height:100%; object-fit:cover; display:block;
-}
-
-.cardlet__body{
-  padding:14px 16px;
-}
-.cardlet__title{ margin:0 0 6px; font-size:18px; font-weight:700; }
-.cardlet__desc{ margin:0; color:#475569; font-size:14px; }
-
-/* 썸네일 플레이스홀더(이미지 없을 때) */
-.thumb-fallback{
-  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-  font-weight:800; font-size:18px; color:#0b1220;
-  background:linear-gradient(135deg,#dbeafe,#bcf0da);
-}
+.cardlet h4{ margin:0 0 6px; font-size:18px; }
+.cardlet p{ margin:0; color:#475569; font-size:14px; }
 
 /* 안내(빈 상태) */
 .empty{
@@ -159,7 +127,7 @@ body{
   background:rgba(255,255,255,.6);
 }
 
-/* 블록 */
+/* 소개/설명 블록 */
 .block{
   background:#fff; color:#0b1220;
   border:1px solid rgba(0,0,0,.08);
@@ -173,11 +141,16 @@ body{
 /* 푸터 */
 footer{ margin-top:14px; text-align:center; color:var(--muted); }
 
-/* 상태 */
+/* =========================================================
+   4) STATE / MODE
+   ========================================================= */
+/* 사이드바 카테고리 클릭 시: 소개 숨기고 워크스페이스만 */
 .workspace-only .columns{ grid-template-columns:1fr; }
 .workspace-only .left{ display:none; }
 
-/* 반응형 */
+/* =========================================================
+   5) RESPONSIVE
+   ========================================================= */
 @media (max-width:980px){
   .columns{ grid-template-columns:1fr; }
 }
@@ -191,25 +164,6 @@ footer{ margin-top:14px; text-align:center; color:var(--muted); }
     margin-bottom:12px;
   }
   .canvas{ padding:16px; }
-}
-
-/* 배경음악 컨트롤 */
-.audioctl{
-  margin-top:14px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.audioctl .vol{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  color:#e5e7eb;
-  font-size:12px;
-}
-.audioctl input[type="range"]{
-  width:100%;
-  accent-color: var(--accent);
 }
 </style>
 </head>
@@ -226,22 +180,6 @@ footer{ margin-top:14px; text-align:center; color:var(--muted); }
     <button class="cat" data-cat="게임">게임</button>
     <button class="cat" data-cat="그림">그림</button>
     <button class="cat" data-cat="기타">기타</button>
-  </div>
-
-  <!-- 배경음악 컨트롤 -->
-  <div class="audioctl">
-    <div class="row" style="display:flex; gap:8px">
-      <button id="music-play" class="cat" type="button">▶ 재생</button>
-      <button id="music-pause" class="cat" type="button" disabled>⏸ 일시정지</button>
-    </div>
-    <div class="vol">
-      <label for="music-vol">볼륨</label>
-      <input id="music-vol" type="range" min="0" max="1" step="0.01" value="0.4" />
-    </div>
-    <div class="vol" style="margin-top:4px">
-      <label for="music-track">트랙</label>
-      <select id="music-track"></select>
-    </div>
   </div>
 </aside>
 
@@ -277,23 +215,23 @@ footer{ margin-top:14px; text-align:center; color:var(--muted); }
 <script>
 /* ===== Waving Background (padding-only fix for top/bottom exposure) ===== */
 (function(){
-  var canvas = document.getElementById('bgCanvas');
-  var ctx = canvas.getContext('2d', { alpha: true });
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d', { alpha: true });
   ctx.imageSmoothingEnabled = true;
 
-  var IMG_URL = 'https://ezekiel123581-cell.github.io/bg4.png'; // 루트에 bg4.png 가정
-  var img = new Image();
+  const IMG_URL = 'https://ezekiel123581-cell.github.io/bg4.png'; // 루트에 bg4.png 가정
+  const img = new Image();
   img.crossOrigin = 'anonymous';
   img.src = IMG_URL;
 
-  var vw=0, vh=0, offscreen, octx;
+  let vw=0, vh=0, offscreen, octx;
 
   // Wave params
-  var amplitude  = 9;       // 흔들림 크기
-  var wavelength = 200;     // 파장
-  var speed      = 0.3;     // 속도
-  var tilt       = 0.25;    // x 진행 위상 가중치
-  var PADDING    = Math.ceil(amplitude * 1.25) + 2; // 상/하 노출 방지
+  const amplitude  = 9;       // 흔들림 크기
+  const wavelength = 200;     // 파장
+  const speed      = 0.3;     // 속도
+  const tilt       = 0.25;    // x 진행 위상 가중치
+  const PADDING    = Math.ceil(amplitude * 1.25) + 2; // 상/하 노출 방지
 
   function resize(){
     vw = canvas.width  = window.innerWidth;
@@ -310,11 +248,11 @@ footer{ margin-top:14px; text-align:center; color:var(--muted); }
   function drawBaseImage(){
     if(!img.complete) return;
 
-    var iw = img.naturalWidth, ih = img.naturalHeight;
-    var r  = Math.max(vw/iw, vh/ih); // cover
-    var dw = iw * r, dh = ih * r;
-    var dx = (vw - dw) * 0.5;
-    var dy = (vh - dh) * 0.5;
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const r  = Math.max(vw/iw, vh/ih); // cover
+    const dw = iw * r, dh = ih * r;
+    const dx = (vw - dw) * 0.5;
+    const dy = (vh - dh) * 0.5;
 
     octx.clearRect(0,0,offscreen.width,offscreen.height);
     // 패딩만큼 아래로 이동해 원본 배치
@@ -324,18 +262,18 @@ footer{ margin-top:14px; text-align:center; color:var(--muted); }
     octx.drawImage(offscreen, 0, vh + PADDING - 1, vw, 1,     0, vh + PADDING,  vw, PADDING);
   }
 
-  var t0=0;
+  let t0=0;
   function animate(ts){
     if(!t0) t0 = ts;
-    var time = (ts - t0) / 1000;
+    const time = (ts - t0) / 1000;
 
     ctx.clearRect(0,0,vw,vh);
 
-    var SLICE_W = 2;
-    for(var x=0; x<vw; x+=SLICE_W){
-      var progress = x / vw;
-      var localAmp = amplitude * (0.4 + 0.6*progress);
-      var yOffset  = Math.sin((x + time*speed*180) / wavelength * (Math.PI*2) + progress*tilt) * localAmp;
+    const SLICE_W = 2;
+    for(let x=0; x<vw; x+=SLICE_W){
+      const progress = x / vw;
+      const localAmp = amplitude * (0.4 + 0.6*progress);
+      const yOffset  = Math.sin((x + time*speed*180) / wavelength * (Math.PI*2) + progress*tilt) * localAmp;
 
       ctx.drawImage(
         offscreen,
@@ -346,144 +284,73 @@ footer{ margin-top:14px; text-align:center; color:var(--muted); }
     requestAnimationFrame(animate);
   }
 
-  img.onload = function(){ resize(); requestAnimationFrame(animate); };
-  // ★ 수정: 이중 호출 제거 → resize 만 호출
-  window.addEventListener('resize', resize);
+  img.onload = () => { resize(); requestAnimationFrame(animate); };
+  window.addEventListener('resize', () => { resize(); drawBaseImage(); });
 })();
 
-/* ===== Items & Category Filter (with thumbnails) ===== */
-/* 썸네일 경로는 실제 저장 위치로 맞춰주세요. */
-var items = [
-  {
-    title:'GitHub',
-    desc:'소스와 저장소',
-    href:'https://github.com/ezekiel123581-cell',
-    cat:'기타',
-     thumb: thumbUrl('img 5.JPG')'
-  },
-  {
-    title:'시각예술시뮬레이터',
-    desc:'시각 실험 데모',
-    href:'./simulator.html',
-    cat:'그림',
-     thumb: THUMB_BASE + 'img3.jpg'
-  },
+/* ===== Items & Category Filter ===== */
+const items = [
+  { title:'GitHub', desc:'소스와 저장소', href:'https://github.com/ezekiel123581-cell', cat:'기타' },
+  { title:'시각예술시뮬레이터', desc:'시각 실험 데모', href:'./simulator.html', cat:'그림' },
+
+  // GPT buttons
   {
     title:'GPT · 지구 칵테일',
     desc:'나만의 GPT – 지구 칵테일',
     href:'https://chatgpt.com/g/g-68b834ee2d4c8191b9ce84960a9aeda8-jigu-kagteil',
-    cat:'기타',
-      thumb: THUMB_BASE + 'img2.jpg'
+    cat:'기타'
   },
   {
     title:'GPT · 요리 레시피를 알려주는 쥐',
     desc:'나만의 GPT – 요리 도우미',
     href:'https://chatgpt.com/g/g-68b81a61f75c8191a19abbbe0d553797-yoriresipireul-alryeojuneun-jwi',
-    cat:'기타',
-    thumb: 'https://ezekiel123581-cell.github.io/thumb/img%201.JPG'
+    cat:'기타'
   },
-  {
-    title:'게임 프로토타입(준비중)',
-    desc:'추가 예정',
-    href:'#',
-    cat:'게임',
-    disabled:true,
-    thumb: THUMB_BASE + 'img6.jpg'   // 프로토 → img 6
-  },
-  {
-    title:'드로잉 · Grim',
-    desc:'캔버스 드로잉 데모',
-    href:'./Grim.html',
-    cat:'그림',
-    thumb: THUMB_BASE + 'img4.jpg'   // 드로잉 → img 4
-  }
+
+  { title:'게임 프로토타입(준비중)', desc:'추가 예정', href:'#', cat:'게임', disabled:true },
+  { title:'드로잉(준비중)', desc:'추가 예정', href:'#', cat:'그림', disabled:true }
 ];
 
+const grid  = document.getElementById('grid');
+const title = document.getElementById('ws-title');
 
-var grid  = document.getElementById('grid');
-var titleEl = document.getElementById('ws-title');
-
-function makePlaceholder(text){
-  text = (text || '').trim().replace(/^GPT\s*·\s*/i,'');
-  // 유니코드 속성 이스케이프(\p{L}) 대신 한글/영문 범위만 안전하게 추출
-  var lettersOnly = text.replace(/[^A-Za-z\uAC00-\uD7A3]/g, '');
-  var initials = (lettersOnly.slice(0,2) || 'WS').toUpperCase();
-  var div = document.createElement('div');
-  div.className = 'thumb-fallback';
-  div.textContent = initials;
-  return div;
-}
-
-function render(category){
-  if (typeof category === 'undefined') category = '전체';
+function render(category='전체'){
   grid.innerHTML='';
-  var filtered = category==='전체' ? items : items.filter(function(it){ return it.cat===category; });
+  const filtered = category==='전체' ? items : items.filter(it=>it.cat===category);
 
   if(filtered.length===0){
-    grid.innerHTML = '<div class="empty">이 카테고리에 표시할 작업이 없습니다.</div>';
+    grid.innerHTML = `<div class="empty">이 카테고리에 표시할 작업이 없습니다.</div>`;
     return;
   }
 
-  filtered.forEach(function(it){
-    var a = document.createElement('a');
-    a.className = 'cardlet';
-
-    // 썸네일 영역
-    var thumbWrap = document.createElement('div');
-    thumbWrap.className = 'cardlet__thumb';
-
-    if (it.thumb){
-      var img = document.createElement('img');
-      img.loading = 'lazy';
-      img.decoding = 'async';
-      img.alt = it.title + ' 미리보기';
-      img.src = it.thumb;
-      // 이미지 로드 에러 시 플레이스홀더로 대체
-      img.addEventListener('error', function(){
-        thumbWrap.innerHTML = '';
-        thumbWrap.appendChild(makePlaceholder(it.title));
-      });
-      thumbWrap.appendChild(img);
-    } else {
-      thumbWrap.appendChild(makePlaceholder(it.title));
-    }
-
-    // 텍스트 영역
-    var body = document.createElement('div');
-    body.className = 'cardlet__body';
-    body.innerHTML = '<h4 class="cardlet__title">' + it.title + '</h4><p class="cardlet__desc">' + it.desc + '</p>';
-
-    // 상태/링크
+  filtered.forEach(it=>{
+    const a=document.createElement('a');
+    a.className='cardlet';
+    a.innerHTML=`<h4>${it.title}</h4><p>${it.desc}</p>`;
     if(it.disabled){
-      a.href = 'javascript:void(0)';
-      a.style.opacity = .6;
-      a.style.pointerEvents = 'none';
+      a.href='javascript:void(0)';
+      a.style.opacity=.6;
+      a.style.pointerEvents='none';
     } else {
-      a.href = it.href;
-      a.target = '_blank';
-      a.rel = 'noopener';
+      a.href=it.href;
+      a.target='_blank';
+      a.rel='noopener';
     }
-
-    // 조립
-    a.appendChild(thumbWrap);
-    a.appendChild(body);
     grid.appendChild(a);
   });
 
-  titleEl.textContent = 'workspace · ' + category;
+  title.textContent = `workspace · ${category}`;
 }
 render('전체');
 // 초기엔 소개 보이도록 유지
 document.body.classList.remove('workspace-only');
 
-// ★ 수정: 카테고리 버튼만 대상으로 범위 한정
-// (음악 버튼은 제외)
-Array.prototype.forEach.call(document.querySelectorAll('.cats .cat'), function(btn){
-  btn.addEventListener('click', function(){
-    Array.prototype.forEach.call(document.querySelectorAll('.cats .cat'), function(b){ b.classList.remove('active'); });
+document.querySelectorAll('.cat').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.cat').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
 
-    var cat = btn.getAttribute('data-cat') || '전체';
+    const cat = btn.dataset.cat;
     render(cat);
 
     // '전체'는 소개 보이고, 나머지는 워크스페이스만
@@ -494,206 +361,6 @@ Array.prototype.forEach.call(document.querySelectorAll('.cats .cat'), function(b
     }
   });
 });
-
-/* ===== Background Music ===== */
-/* ===== Background Music: Playlist (Repeat-All) ===== */
-var AUDIO_BASE = 'https://ezekiel123581-cell.github.io/audio/'; // <- 네 오디오 폴더 URL로 수정
-
-var FILENAMES = [
-  'Untitled (1).mp3',
-  'Untitled.mp3',
-  '君の中にある赤い線と青い線 (1).mp3',
-  '君の中にある赤い線と青い線.mp3',
-  '君の中にある赤い線と青い線 (3).mp3',
-  '君の中にある赤い線と青い線 (2).mp3',
-  'The red line and blue line within you.mp3',
-  'The red line and blue line within you (1).mp3'
-];
-
-var PLAYLIST = FILENAMES.map(function(name){
-  return {
-    title: name.replace(/\.mp3$/i, ''),
-    src: encodeURI(AUDIO_BASE + name)
-  };
-});
-
-var idxStored = localStorage.getItem('bgmIndex');
-var idxParsed = parseInt(idxStored != null ? idxStored : '0', 10);
-var currentIndex = Math.min(Math.max(isNaN(idxParsed) ? 0 : idxParsed, 0), PLAYLIST.length - 1);
-
-var savedVolStored = localStorage.getItem('bgmVol');
-var savedVol = savedVolStored !== null ? parseFloat(savedVolStored) : 0.4;
-var savedOn  = localStorage.getItem('bgmOn') === '1';
-
-var bgm = new Audio(PLAYLIST[currentIndex].src);
-bgm.loop = false;          // 한 곡 반복 X (플레이리스트 반복으로 처리)
-bgm.preload = 'auto';
-bgm.volume = isFinite(savedVol) ? savedVol : 0.4;
-
-var $vol    = document.getElementById('music-vol');
-var $track  = document.getElementById('music-track');
-var $playBtn = document.getElementById('music-play');
-var $pauseBtn = document.getElementById('music-pause');
-function updateUiPlaying(isPlaying){
-  if ($playBtn && $pauseBtn){
-    $playBtn.disabled = isPlaying;
-    $pauseBtn.disabled = !isPlaying;
-  }
-}
-updateUiPlaying(false);
-
-if ($vol) $vol.value = String(bgm.volume);
-if ($track){
-  $track.innerHTML = PLAYLIST.map(function(t, i){
-    var full = t.title || '';
-    var idxParen = full.indexOf('(');
-    var cleaned = idxParen > -1 ? full.slice(0, idxParen).trim() : full;
-    var short = cleaned.length > 12 ? (cleaned.slice(0, 11) + '…') : cleaned;
-    var label = (i+1 < 10 ? '0' : '') + (i+1) + ' · ' + short;
-    return '<option value="' + i + '">' + label + '</option>';
-  }).join('');
-  $track.value = String(currentIndex);
-}
-
-function fadeTo(target, ms){
-  if (typeof target === 'undefined') target = 1;
-  if (typeof ms === 'undefined') ms = 500;
-  var steps = 24, dt = ms / steps;
-  var start = bgm.volume;
-  var i = 0;
-  var timer = setInterval(function(){
-    i++;
-    bgm.volume = Math.min(1, Math.max(0, start + (target - start) * (i/steps)));
-    if (i >= steps) clearInterval(timer);
-  }, dt);
-}
-
-function setTrack(index, opts){
-  opts = opts || {};
-  var autoplay = !!opts.autoplay;
-  currentIndex = (index + PLAYLIST.length) % PLAYLIST.length; // 순환
-  localStorage.setItem('bgmIndex', String(currentIndex));
-
-  var keepVolume = bgm.volume;
-  var wasPlaying = autoplay || !bgm.paused;
-
-  try { bgm.pause(); } catch(_) {}
-  bgm.src = PLAYLIST[currentIndex].src + '?v=' + Date.now(); // 캐시 회피
-  bgm.currentTime = 0;
-  bgm.volume = keepVolume;
-
-  if ($track) $track.value = String(currentIndex);
-
-  if (wasPlaying) {
-    try {
-      bgm.play().then(function(){
-        fadeTo(keepVolume, 300);
-        updateUiPlaying(true);
-      }).catch(function(e){ console.warn(e); });
-    } catch(e) {
-      console.warn(e);
-    }
-  }
-}
-
-function nextTrack(){ setTrack(currentIndex + 1, { autoplay: !bgm.paused }); }
-function prevTrack(){ setTrack(currentIndex - 1, { autoplay: !bgm.paused }); }
-
-bgm.addEventListener('ended', nextTrack);  // 한 곡 끝나면 다음 곡 → 끝나면 처음으로
-
-function safeVol(){ return ($vol && $vol.value) ? parseFloat($vol.value) : 0.4; }
-
-function playBgm(){
-  try{
-    if (bgm.currentTime === 0) { bgm.play().then(function(){ bgm.pause(); }).catch(function(){}) }
-    bgm.play().then(function(){
-      fadeTo(safeVol(), 300);
-      updateUiPlaying(true);
-      localStorage.setItem('bgmOn','1');
-    }).catch(function(e){ console.warn('Autoplay blocked:', e); });
-  }catch(e){
-    console.warn('Autoplay blocked:', e);
-  }
-}
-function pauseBgm(){
-  fadeTo(0, 250);
-  setTimeout(function(){ bgm.pause(); }, 260);
-  updateUiPlaying(false);
-  localStorage.setItem('bgmOn','0');
-}
-
-if ($playBtn) $playBtn.addEventListener('click', playBgm);
-if ($pauseBtn) $pauseBtn.addEventListener('click', pauseBgm);
-if ($vol) $vol.addEventListener('input', function(e){
-  var v = parseFloat(e.target.value);
-  bgm.volume = v;
-  localStorage.setItem('bgmVol', String(v));
-});
-if ($track) $track.addEventListener('change', function(e){
-  var i = parseInt(e.target.value, 10) || 0;
-  setTrack(i, { autoplay: !bgm.paused });
-});
-
-var wasPlaying = false;
-document.addEventListener('visibilitychange', function(){
-  if (document.hidden){
-    wasPlaying = !bgm.paused;
-    if (wasPlaying) pauseBgm();
-  } else {
-    if (wasPlaying) playBgm();
-  }
-});
-
-if (savedOn){
-  var unlock = function(){
-    if (bgm.paused) playBgm();
-    window.removeEventListener('pointerdown', unlock);
-    window.removeEventListener('keydown',  unlock);
-  };
-  window.addEventListener('pointerdown', unlock);
-  window.addEventListener('keydown',  unlock);
-  updateUiPlaying(true);
-}
-
-/* ===== Simple Self Tests (non-intrusive) ===== */
-(function selfTest(){
-  try{
-    console.group('Self-test');
-    console.assert(typeof updateUiPlaying === 'function', 'updateUiPlaying exists');
-    updateUiPlaying(true);
-    console.assert(($playBtn && $playBtn.disabled) === true && ($pauseBtn && $pauseBtn.disabled) === false, 'Play disabled / Pause enabled when playing');
-    updateUiPlaying(false);
-    console.assert(($playBtn && $playBtn.disabled) === false && ($pauseBtn && $pauseBtn.disabled) === true, 'Play enabled / Pause disabled when paused');
-    console.assert(Array.isArray(PLAYLIST) && PLAYLIST.length > 0, 'Playlist exists');
-    console.assert(typeof render === 'function', 'render exists');
-    if ($track && $track.options && $track.options.length) {
-      var okLen = Array.prototype.every.call($track.options, function(o){ return o.text.length <= 16; });
-      console.assert(okLen, 'Option text length <= 16');
-    }
-    // Layout test: ensure audio controls don't overflow sidebar
-    var sidebarEl = document.querySelector('.sidebar');
-    if (sidebarEl){
-      var sbr = sidebarEl.getBoundingClientRect();
-      var ids = ['music-play','music-pause','music-vol','music-track'];
-      ids.forEach(function(id){
-        var el = document.getElementById(id);
-        if(!el) return;
-        var r = el.getBoundingClientRect();
-        console.assert(r.right <= sbr.right + 1, id + ' fits within sidebar width');
-      });
-      var row = document.querySelector('.audioctl .row');
-      if (row){
-        var rr = row.getBoundingClientRect();
-        console.assert(rr.right <= sbr.right + 1, 'audioctl row fits within sidebar width');
-      }
-    }
-    console.log('OK');
-  }catch(e){
-    console.error('Self-test failed', e);
-  }
-  console.groupEnd();
-})();
-
 </script>
 </body>
 </html>
