@@ -3,7 +3,17 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<script>
+const SITE_BASE = (() => {
+  const parts = location.pathname.split('/').filter(Boolean);
+  if (parts.length === 0 || (parts[0] && parts[0].includes('.'))) return '/';
+  return '/' + parts[0] + '/';
+})();
+const THUMB_BASE = 'thumb/'; // 현재 HTML 기준 상대경로로 유지
 
+// 파일명만 안전하게 인코딩해서 붙이기
+const thumbUrl = (filename) => THUMB_BASE + encodeURIComponent(filename);
+</script>
 <title>김은석 · Workspace</title>
 <meta name="description" content="개인 포트폴리오 & 워크스페이스" />
 
