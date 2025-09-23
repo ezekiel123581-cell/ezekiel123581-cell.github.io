@@ -5,10 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <script>
 // 페이지가 사용자/프로젝트 페이지 어느 쪽이든 안전하게 베이스 계산
-const SITE_BASE = (function(){
-  const parts = location.pathname.split('/').filter(Boolean);
-  return parts.length ? '/' + parts[0] + '/' : '/';
-})();
+ const SITE_BASE = (() => {
+   const parts = location.pathname.split('/').filter(Boolean);
+   // 첫 조각이 파일명(index.html 등)이면 루트로 간주
+   if (parts.length === 0 || (parts[0] && parts[0].includes('.'))) return '/';
+  return '/' + parts[0] + '/';
+ })();
 const THUMB_BASE = SITE_BASE + 'thumb/';   // ← 깃허브의 /thumb 폴더
 </script>
 
