@@ -11,7 +11,7 @@
    if (parts.length === 0 || (parts[0] && parts[0].includes('.'))) return '/';
   return '/' + parts[0] + '/';
  })();
-const THUMB_BASE = SITE_BASE + 'thumb/';   // ← 깃허브의 /thumb 폴더
+cconst thumbUrl = (filename) => THUMB_BASE + encodeURIComponent(filename);   // ← 깃허브의 /thumb 폴더
 </script>
 
 <title>김은석 · Workspace</title>
@@ -359,7 +359,7 @@ var items = [
     desc:'소스와 저장소',
     href:'https://github.com/ezekiel123581-cell',
     cat:'기타',
-      thumb: THUMB_BASE + 'img5.jpg'
+     thumb: thumbUrl('img 5.JPG')'
   },
   {
     title:'시각예술시뮬레이터',
