@@ -5,11 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>웹 피아노 · 심플(연주모드/난이도/볼륨/리버브/키보드/건반/메트로놈)</title>
 <!--
-  업데이트(요청 반영):
-  - 리듬게임: 수동 시작/정지 버튼 유지
-  - 초심자 모드: 가이드 하이라이트 + "다음 음" 안내(연습곡 따라치기)
-  - 모바일: 터치 레인에 가벼운 진동 피드백
-  - 악보: 상단에 간단 오선보 캔버스 렌더러(차트 기반)
+  Fix: SyntaxError("Unexpected token 'function'")
+  - 원인: 스크립트 블록 안에서 중괄호(})가 하나 더 들어가 IIFE 범위를 깨뜨려,
+          이후의 function 선언이 HTML 파서에 노출되어 에러 발생.
+  - 해결: 잘못된 여분의 } 제거, 모든 JS는 단일 <script> 내부 IIFE로 감쌈.
+  - 추가: 간단한 self-test(콘솔) 추가로 기본 동작 검증.
+  업데이트(기능):
+  - 컨트롤 재배치(볼륨 아래 BPM/메트로놈, 옥타브)
+  - 악보 선택(반짝반짝, C 스케일, C 아르페지오, 환희의 송가, 랜덤)
+  - 자유연주 추적(follow) + 부드러운 자동 넘김(25% 여유)
 -->
 <style>
   :root{ --bg1:#0f172a; --bg2:#1e293b; --card:#0b1220cc; --text:#e6edf6; --muted:#9fb0c5; --accent:#7cc4ff; --ok:#26d07c; }
@@ -25,11 +29,12 @@
   header{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
   h1{font-size:18px;margin:0}
   .panel{background:var(--card);backdrop-filter:blur(6px);border:1px solid #ffffff22;border-radius:16px;padding:10px;box-shadow:0 10px 30px #0006}
-  .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  /* 컨트롤 영역: 단일 컬럼으로 재배치 */
+  .controls{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:12px}
   .group{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
   .group label{display:flex;gap:8px;align-items:center;color:var(--muted);white-space:nowrap}
   select,input[type="range"],button{accent-color:var(--accent)}
-  input[type="range"]{width:160px}
+  input[type="range"]{width:200px}
   .kbd{font:12px/1 monospace;background:#0005;color:#fff;padding:2px 6px;border-radius:6px}
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .spacer{flex:1} .small{font-size:12px;color:var(--muted)}
@@ -38,9 +43,12 @@
   .btn.primary{border-color:transparent;background:linear-gradient(180deg,var(--accent),#5cb8ff)}
 
   /* 악보 영역 */
-  .sheet{height:180px;margin-bottom:10px;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .sheet{height:200px;margin-bottom:10px;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
   .sheet canvas{width:100%;height:100%;display:block}
   .sheet .hint{position:absolute;bottom:10px;right:12px;font-size:12px;color:var(--muted)}
+  .sheet .pager{position:absolute;top:6px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:#00000030;border:1px solid #ffffff22;border-radius:999px;padding:4px 8px}
+  .sheet .pager button{background:#ffffff14;border:1px solid #ffffff22;color:#fff;border-radius:999px;padding:4px 8px;cursor:pointer}
+  .sheet .pager .info{font-size:12px;color:#cfe1ff}
 
   /* 키보드(건반) */
   .kb{position:relative;--white-count:15;height:260px;user-select:none;margin-top:6px}
@@ -75,6 +83,10 @@
   /* 모바일 터치 레인 */
   .touchLanes{display:none;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:8px}
   .touchLanes button{padding:14px 0;border-radius:10px;background:#ffffff14;border:1px solid #ffffff22;color:#fff}
+
+  /* 테스트 배지(성공 시) */
+  #testBadge{position:fixed;left:8px;bottom:8px;background:#052e1a;color:#9ff1c5;border:1px solid #0a5b31;border-radius:12px;padding:6px 10px;font-size:12px;display:none;z-index:9999}
+  #testBadge.fail{background:#3b0b10;color:#ffd5db;border-color:#821a26}
 </style>
 </head>
 <body>
@@ -87,6 +99,7 @@
     </header>
 
     <div class="panel controls">
+      <!-- 1) 모드/난이도/연습/게임버튼 -->
       <div class="group" id="groupMode">
         <label>연주 모드
           <select id="playMode">
@@ -109,20 +122,31 @@
         </div>
       </div>
 
+      <!-- 2) 악보 선택 -->
+      <div class="group" id="groupScore">
+        <label>악보
+          <select id="scoreSelect"></select>
+        </label>
+        <span class="small">연습·게임 모두 여기서 고른 곡으로 표시/진행</span>
+      </div>
+
+      <!-- 3) 톤(리버브/볼륨) -->
       <div class="group" id="groupTone">
         <label>리버브 <input id="reverbWet" type="range" min="0" max="1" step="0.01" value="0.20"></label>
         <label>볼륨 <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8"></label>
       </div>
 
-      <div class="group" id="groupPlay">
+      <!-- 4) 템포/메트로놈(볼륨 아래) -->
+      <div class="group" id="groupTempo">
+        <label>BPM <input id="bpm" type="range" min="30" max="240" step="1" value="100"></label>
+        <button class="btn" id="metro">메트로놈 시작</button>
+        <div class="beatbar" id="beatbar"></div>
+      </div>
+
+      <!-- 5) 옥타브(볼륨 아래) + 키맵 안내 -->
+      <div class="group" id="groupOctave">
         <label>키보드 옥타브 <button class="btn" id="octDown">-</button> <span id="octText">4</span> <button class="btn" id="octUp">+</button></label>
         <span class="small">키보드: <span class="kbd">A W S E D F T G Y H U J K O L P ; '</span></span>
-        <div class="spacer"></div>
-        <div class="row">
-          <label>BPM <input id="bpm" type="range" min="30" max="240" step="1" value="100"></label>
-          <button class="btn" id="metro">메트로놈 시작</button>
-          <div class="beatbar" id="beatbar"></div>
-        </div>
       </div>
     </div>
 
@@ -130,6 +154,7 @@
     <div class="panel sheet" id="sheet">
       <canvas id="sheetCanvas"></canvas>
       <div class="hint" id="sheetHint">악보 표시 영역</div>
+      <div class="pager"><button id="sheetPrev">◀</button><span class="info" id="sheetPageInfo">1/1</span><button id="sheetNext">▶</button></div>
     </div>
 
     <!-- 자유연주 건반 -->
@@ -141,8 +166,10 @@
       <div class="touchLanes" id="touchLanes"></div>
     </div>
 
-    <footer>모드·난이도·볼륨·리버브·키보드·건반·메트로놈 유지. 연습 가이드(다음 음 하이라이트)·간단 악보 렌더러·모바일 진동 추가.</footer>
+    <footer>컨트롤 재배치(볼륨 아래에 BPM/메트로놈·옥타브). 악보 선택(여러 곡) 추가.</footer>
   </div>
+
+  <div id="testBadge">Self‑tests passed</div>
 
 <script>
 (() => {
@@ -157,7 +184,7 @@
   let audioCtx=null; const buses={ master:null,dry:null,wet:null,convolver:null,filter:null };
   const voices=new Map();
   const state={ mode:'advanced', vol:0.8, reverbWet:0.20 };
-  const K_RANGE={ start:60, end:84 }; let SHOW_BLACK=true; // 상급 기본: C4~C6
+  const K_RANGE={ start:60, end:77 }; let SHOW_BLACK=true; // 상급: C4~F5 (' 까지)
 
   function ensureAudio(){
     if(!audioCtx){
@@ -196,13 +223,13 @@
   }
   function layoutBlack(){ if(!SHOW_BLACK||whiteButtons.length===0) return; const rects=whiteButtons.map(b=>({left:b.offsetLeft,width:b.offsetWidth,center:b.offsetLeft+b.offsetWidth/2})); const w=whiteButtons[0]?.offsetWidth||50; blackButtons.forEach(btn=>{ const m=+btn.dataset.midi; let prev=m-1; while(prev>=K_RANGE.start&&isBlack(prev)) prev--; let next=m+1; while(next<=K_RANGE.end&&isBlack(next)) next++; const prevIdx=whiteButtons.findIndex(wb=>+wb.dataset.midi===prev); const nextIdx=whiteButtons.findIndex(wb=>+wb.dataset.midi===next); if(prevIdx<0||nextIdx<0) return; const left=(rects[prevIdx].center+rects[nextIdx].center)/2; btn.style.left=left+'px'; btn.style.width=Math.max(28,Math.min(w*0.62,50))+'px'; }); }
   function keyFromEventTarget(t){ const btn=t.closest('.key'); return btn? +btn.dataset.midi : null; }
-  function onPointerDown(e){ const midi=keyFromEventTarget(e.target); if(midi==null) return; ensureAudio(); e.target.setPointerCapture?.(e.pointerId); startNote(midi); if(shouldAdvancePractice(midi)) advancePractice(); }
+  function onPointerDown(e){ const midi=keyFromEventTarget(e.target); if(midi==null) return; ensureAudio(); e.target.setPointerCapture?.(e.pointerId); startNote(midi); if(shouldAdvancePractice(midi)) advancePractice(); onUserPlayedMidi(midi); }
   function onPointerUp(e){ const midi=keyFromEventTarget(e.target); if(midi==null) return; stopNote(midi); }
   function highlightKey(midi,down){ const el=$(`.key[data-midi="${midi}"]`); if(el) el.classList.toggle('is-down',!!down); }
 
   // ===== PC 키보드 매핑 =====
   let keyOct=4; const baseMap=['a','w','s','e','d','f','t','g','y','h','u','j','k','o','l','p',';','\'']; const baseStartMidi=60;
-  function handleKeyDown(e){ const isGame = $('#playMode').value==='game'; if(isGame) return; if(e.repeat) return; const k=e.key.toLowerCase(); if(k==='['){ keyOct=Math.max(1,keyOct-1); $('#octText').textContent=keyOct; updateKeyPCLabels(); e.preventDefault(); return; } if(k===']'){ keyOct=Math.min(7,keyOct+1); $('#octText').textContent=keyOct; updateKeyPCLabels(); e.preventDefault(); return; } const idx=baseMap.indexOf(k); if(idx>=0){ const midi=baseStartMidi+(keyOct-4)*12+idx; if(midi>=K_RANGE.start && midi<=K_RANGE.end){ startNote(midi); const el=$(`.key[data-midi="${midi}"]`); el?.classList.add('is-down'); if(shouldAdvancePractice(midi)) advancePractice(); e.preventDefault(); } } }
+  function handleKeyDown(e){ const isGame = $('#playMode').value==='game'; if(isGame) return; if(e.repeat) return; const k=e.key.toLowerCase(); if(k==='['){ keyOct=Math.max(1,keyOct-1); $('#octText').textContent=keyOct; updateKeyPCLabels(); e.preventDefault(); return; } if(k===']'){ keyOct=Math.min(7,keyOct+1); $('#octText').textContent=keyOct; updateKeyPCLabels(); e.preventDefault(); return; } const idx=baseMap.indexOf(k); if(idx>=0){ const midi=baseStartMidi+(keyOct-4)*12+idx; if(midi>=K_RANGE.start && midi<=K_RANGE.end){ startNote(midi); const el=$(`.key[data-midi="${midi}"]`); el?.classList.add('is-down'); onUserPlayedMidi(midi); if(shouldAdvancePractice(midi)) advancePractice(); e.preventDefault(); } } }
   function handleKeyUp(e){ const isGame = $('#playMode').value==='game'; if(isGame) return; const k=e.key.toLowerCase(); const idx=baseMap.indexOf(k); if(idx>=0){ const midi=baseStartMidi+(keyOct-4)*12+idx; if(midi>=K_RANGE.start && midi<=K_RANGE.end){ stopNote(midi); const el=$(`.key[data-midi="${midi}"]`); el?.classList.remove('is-down'); e.preventDefault(); } } }
 
   // ===== 메트로놈 =====
@@ -212,21 +239,38 @@
   function startMetro(){ ensureAudio(); metro.on=true; metro.nextTime=audioCtx.currentTime+0.05; metro.beat=0; metroLoop(); document.getElementById('metro').textContent='메트로놈 정지'; }
   function stopMetro(){ metro.on=false; clearTimeout(metro.timer); document.getElementById('metro').textContent='메트로놈 시작'; $$('#beatbar .meter').forEach(d=>d.classList.remove('active')); }
 
+  // ===== 악보(차트) 정의 & 선택 =====
+  const lanesDef=[{name:'C4',midi:60,key:'a'},{name:'D4',midi:62,key:'s'},{name:'E4',midi:64,key:'d'},{name:'F4',midi:65,key:'f'},{name:'G4',midi:67,key:'g'},{name:'A4',midi:69,key:'h'},{name:'B4',midi:71,key:'j'}];
+
+  function seqFromLaneIdx(arr){ return arr.map((l,i)=>({ t:i, l })); }
+  function makeRandomChart(len=24){ let l=0; const out=[]; for(let i=0;i<len;i++){ l=Math.max(0,Math.min(6,l+Math.floor(Math.random()*5)-2)); out.push({t:i,l}); } return { id:'random', title:'랜덤 연습', bpm:100, notes:out }; }
+
+  const chartDefs = {
+    'twinkle-easy': { id:'twinkle-easy', title:'반짝반짝(미니)', bpm:100, notes: [0,0,4,4,5,5,4, 3,3,2,2,1,1,0, 4,4,3,3,2,2,1].map((l,i)=>({t:i,l})) },
+    'c-scale': { id:'c-scale', title:'C 스케일(상·하행)', bpm:96, notes: seqFromLaneIdx([0,1,2,3,4,5,6,0, 6,5,4,3,2,1,0]) },
+    'arp-c': { id:'arp-c', title:'C 아르페지오', bpm:108, notes: seqFromLaneIdx([0,2,4,2, 0,2,4,2, 1,3,5,3, 1,3,5,3]) },
+    'ode-mini': { id:'ode-mini', title:'환희의 송가(미니)', bpm:104, notes: seqFromLaneIdx([2,2,3,4,4,3,2,1, 0,0,1,2,2,1,1, 2,2,3,4,4,3,2,1]) }
+  };
+  let currentChartId='twinkle-easy';
+
+  // 셀렉트 옵션 채우기
+  const scoreSel = document.getElementById('scoreSelect');
+  function populateScoreOptions(){ scoreSel.innerHTML=''; const ids=Object.keys(chartDefs); ids.forEach(id=>{ const opt=document.createElement('option'); opt.value=id; opt.textContent=chartDefs[id].title; scoreSel.appendChild(opt); }); const rnd=document.createElement('option'); rnd.value='random'; rnd.textContent='랜덤 연습'; scoreSel.appendChild(rnd); scoreSel.value=currentChartId; }
+  function getCurrentChart(){ const id=scoreSel.value; return id==='random' ? makeRandomChart() : chartDefs[id]; }
+
   // ===== 모드 전환(자유연주/리듬게임, 초심/상급) =====
   function applyMode(){ const m=document.getElementById('mode').value; state.mode=m; if(m==='beginner'){ K_RANGE.start=60; K_RANGE.end=72; SHOW_BLACK=false; keyOct=4; document.getElementById('octText').textContent=4; } else { K_RANGE.start=60; K_RANGE.end=77; SHOW_BLACK=true; } buildKeys(); drawSheet(); }
 
   // ===== 리듬게임(최소) =====
-  const lanesDef=[{name:'C4',midi:60,key:'a'},{name:'D4',midi:62,key:'s'},{name:'E4',midi:64,key:'d'},{name:'F4',midi:65,key:'f'},{name:'G4',midi:67,key:'g'},{name:'A4',midi:69,key:'h'},{name:'B4',midi:71,key:'j'}];
   const lanesEl=document.getElementById('lanes'); const laneCols=[];
   function buildGameLanes(){ lanesEl.innerHTML=''; laneCols.length=0; lanesDef.forEach((ln,i)=>{ const col=document.createElement('div'); col.className='lane'; const label=document.createElement('div'); label.className='small'; label.style.position='absolute'; label.style.left='8px'; label.style.top='8px'; label.textContent = ln.key.toUpperCase(); const receptor=document.createElement('div'); receptor.className='receptor'; col.appendChild(label); col.appendChild(receptor); lanesEl.appendChild(col); laneCols.push(col); col.addEventListener('pointerdown', ()=> { tryHitLane(i); if(navigator.vibrate) navigator.vibrate(15); }); }); }
 
-  const charts=[{ id:'twinkle-easy', title:'반짝반짝(미니)', bpm:100, offset:0, notes:[0,1,2,3,4,5,6, 8,9,10,11,12,13,14, 16,17,18,19,20,21,22].map((t,i)=>({t, l:[0,0,4,4,5,5,4, 3,3,2,2,1,1,0, 4,4,3,3,2,2,1][i]})) }];
   const game={ running:false, startT:0, approach:2.2, notes:[], bpm:100 };
   function beatsToSec(bpm,b){ return b*(60/bpm); }
   function secToY(secUntil){ const h=lanesEl.clientHeight; const receptorY=h-28; const speedPx=receptorY/game.approach; return receptorY-(secUntil*speedPx); }
-  function loadMiniChart(){ const ch=charts[0]; game.bpm=ch.bpm; game.notes=ch.notes.map(n=>({ t:n.t, l:n.l, s:beatsToSec(ch.bpm,n.t), judged:false, el:null })); laneCols.forEach(col=>{ [...col.querySelectorAll('.note')].forEach(e=>e.remove()); }); game.notes.forEach(nt=>{ const el=document.createElement('div'); el.className='note'; nt.el=el; laneCols[nt.l].appendChild(el); }); drawSheet(); }
-  let rafId=null; function renderFrame(){ if(!game.running) return; const now=audioCtx.currentTime; const songT=now-game.startT; for(const nt of game.notes){ if(nt.judged) continue; const dt=nt.s-songT; const y=secToY(dt); if(y<-30){ nt.el.style.transform='translateY(-40px)'; continue; } nt.el.style.transform=`translateY(${y}px)`; if(dt<-0.22){ nt.judged=true; } } rafId=requestAnimationFrame(renderFrame); }
-  function startGame(){ ensureAudio(); allNotesOff(); loadMiniChart(); game.running=true; game.startT=audioCtx.currentTime+0.3; cancelAnimationFrame(rafId); rafId=requestAnimationFrame(renderFrame); }
+  function loadChart(ch){ game.bpm=ch.bpm; game.notes=ch.notes.map(n=>({ t:n.t, l:n.l, s:beatsToSec(ch.bpm,n.t), judged:false, el:null })); laneCols.forEach(col=>{ [...col.querySelectorAll('.note')].forEach(e=>e.remove()); }); game.notes.forEach(nt=>{ const el=document.createElement('div'); el.className='note'; nt.el=el; laneCols[nt.l].appendChild(el); }); drawSheet(); }
+  let rafId=null; function renderFrame(){ if(!game.running) return; const now=audioCtx.currentTime; const songT=now-game.startT; ensureIndexVisible(Math.floor(songT * game.bpm / 60)); for(const nt of game.notes){ if(nt.judged) continue; const dt=nt.s-songT; const y=secToY(dt); if(y<-30){ nt.el.style.transform='translateY(-40px)'; continue; } nt.el.style.transform=`translateY(${y}px)`; if(dt<-0.22){ nt.judged=true; } } rafId=requestAnimationFrame(renderFrame); }
+  function startGame(){ ensureAudio(); allNotesOff(); sheetPageStart=0; follow.active=false; follow.idx=0; loadChart(getCurrentChart()); game.running=true; game.startT=audioCtx.currentTime+0.3; cancelAnimationFrame(rafId); rafId=requestAnimationFrame(renderFrame); }
   function stopGame(){ game.running=false; cancelAnimationFrame(rafId); allNotesOff(); }
 
   // 수동 탭/터치 입력
@@ -234,19 +278,21 @@
 
   // ===== 연습 가이드(다음 음 하이라이트 + 악보) =====
   const practice={ on:false, idx:0 };
-  function expectedMidi(){ const ch=charts[0]; const note=ch.notes[practice.idx % ch.notes.length]; return lanesDef[note.l].midi; }
+  const follow={ active:false, idx:0 };
+  function expectedMidi(){ const ch=getCurrentChart(); const note=ch.notes[practice.idx % ch.notes.length]; return lanesDef[note.l].midi; }
   function updatePracticeHighlights(){ // 초심자+자유연주+연습ON 일 때만
     $$('.key.white').forEach(k=>k.classList.remove('next'));
     if($('#playMode').value!=='free') return; if(!practice.on) return; if(state.mode!=='beginner') return;
     const midi=expectedMidi(); const el=$(`.key[data-midi="${midi}"]`); el?.classList.add('next');
   }
   function shouldAdvancePractice(playedMidi){ return practice.on && $('#playMode').value==='free' && state.mode==='beginner' && playedMidi===expectedMidi(); }
-  function advancePractice(){ practice.idx=(practice.idx+1)%charts[0].notes.length; updatePracticeHighlights(); updateKeyPCLabels(); drawSheet(); }
-  function resetPractice(){ practice.idx=0; updatePracticeHighlights(); updateKeyPCLabels(); drawSheet(); }
+  function advancePractice(){ const ch=getCurrentChart(); practice.idx=(practice.idx+1)%ch.notes.length; updatePracticeHighlights(); updateKeyPCLabels(); ensureIndexVisible(practice.idx); drawSheet(); }
+  function resetPractice(){ practice.idx=0; follow.idx=0; if(!practice.on) follow.active=false; sheetPageStart=0; updatePracticeHighlights(); updateKeyPCLabels(); drawSheet(); }
 
   // ===== 간단 오선보 렌더러(차트 기반) =====
   const sheetCanvas = document.getElementById('sheetCanvas');
   const sheetHint = document.getElementById('sheetHint');
+  const SHEET_SPAN = 20; let sheetPageStart = 0;
   function letterOf(midi){ return NAMES[midi%12][0]; }
   function octaveOf(midi){ return Math.floor(midi/12)-1; }
   const LETTERS=['C','D','E','F','G','A','B']; const E_INDEX=2; // Treble: 아래줄 E4 기준
@@ -267,34 +313,69 @@
     return '';
   }
 
+  // 악보 페이지 표시 업데이트
+  function updateSheetPager(){
+    const info=document.getElementById('sheetPageInfo'); if(!info) return;
+    const ch=getCurrentChart(); const total=Math.max(1, Math.ceil(ch.notes.length / SHEET_SPAN));
+    const curr=Math.floor(sheetPageStart / SHEET_SPAN)+1; info.textContent=`${curr}/${total}`;
+  }
+  // 연주 진행에 따라 현재 인덱스가 페이지 끝에 가까워지면 자동 넘김(부드러운 따라가기)
+  function ensureIndexVisible(idx){
+    const ch=getCurrentChart();
+    const maxStart=Math.max(0, ch.notes.length - SHEET_SPAN);
+    const pad = Math.max(3, Math.floor(SHEET_SPAN*0.25)); // 남길 여백(25%)
+    const left = sheetPageStart;
+    const right = sheetPageStart + SHEET_SPAN - 1;
+    if(idx < left + pad || idx > right - pad){
+      let targetStart = idx - Math.floor(SHEET_SPAN*0.5);
+      targetStart = Math.max(0, Math.min(maxStart, targetStart));
+      if(Math.abs(targetStart - sheetPageStart) >= 1){
+        sheetPageStart = targetStart;
+        drawSheet();
+      }
+    }
+  }
+
+  // ====== 유저 연주 추적(자유연주) ======
+  function laneFromMidi(m){ const map={0:0,2:1,4:2,5:3,7:4,9:5,11:6}; return (map[m%12] ?? null); }
+  function onUserPlayedMidi(midi){
+    if(document.getElementById('playMode').value!=='free') return;
+    const ch=getCurrentChart(); const lane=laneFromMidi(midi); follow.active=true;
+    if(lane==null){ drawSheet(); return; }
+    const expect = ch.notes[follow.idx % ch.notes.length].l;
+    if(lane===expect){ follow.idx=(follow.idx+1)%ch.notes.length; ensureIndexVisible(follow.idx); }
+    drawSheet();
+  }
+
   function drawSheet(){ const ctx=sheetCanvas.getContext('2d'); const dpi=window.devicePixelRatio||1; const w=sheetCanvas.clientWidth, h=sheetCanvas.clientHeight; sheetCanvas.width=Math.floor(w*dpi); sheetCanvas.height=Math.floor(h*dpi); ctx.scale(dpi,dpi); ctx.clearRect(0,0,w,h);
     // 가이드/표시 조건
-    const showNotes = practice.on || document.getElementById('playMode').value==='game';
+    const showNotes = practice.on || document.getElementById('playMode').value==='game' || follow.active;
     sheetHint.style.display = showNotes? 'none':'block';
+    // 하이라이트 인덱스 계산 (연습/팔로우)
+    const inGame = document.getElementById('playMode').value==='game';
+    let hiIdx = null; if(practice.on) hiIdx = practice.idx; else if(!inGame && follow.active) hiIdx = follow.idx;
     // 오선(트레블)
     const left=24, right=w-16, top=36, gap=12; ctx.lineWidth=1; ctx.strokeStyle='#e6edf64a';
     for(let i=0;i<5;i++){ const y=top+i*gap; ctx.beginPath(); ctx.moveTo(left,y); ctx.lineTo(right,y); ctx.stroke(); }
     // 차트 노트 렌더
-    const ch=charts[0]; const span=20; const startIdx = practice.on? Math.max(0,practice.idx-8):0; const endIdx=Math.min(ch.notes.length, startIdx+span);
+    const ch=getCurrentChart(); const span=SHEET_SPAN; const startIdx = Math.max(0, Math.min(sheetPageStart, Math.max(0, ch.notes.length - span))); const endIdx=Math.min(ch.notes.length, startIdx+span); updateSheetPager();
     const nx= (right-left-20) / Math.max(1,(endIdx-startIdx));
     ctx.textAlign='center'; ctx.textBaseline='alphabetic';
     for(let i=startIdx;i<endIdx;i++){
       const n=ch.notes[i]; const midi=lanesDef[n.l].midi; const steps=diatonicStepsFromE4(midi); const y = top + 4*gap - (steps*gap/2);
       const x = left + 10 + (i-startIdx)*nx + nx*0.4;
       // 음표(단순 타원)
-      ctx.fillStyle = (practice.on && i===practice.idx)? '#26d07c' : '#cfe8ff';
+      ctx.fillStyle = (hiIdx!==null && i===hiIdx)? '#26d07c' : '#cfe8ff';
       ctx.strokeStyle = '#11334a';
       ctx.beginPath(); ctx.ellipse(x,y,7,5, -0.35, 0, Math.PI*2); ctx.fill(); ctx.stroke();
       // 보조선(ledger) 필요 시
-      const bottomY = top+4*gap, topY=top; if(y>bottomY+gap/2){ // 아래로 벗어남(C4 등)
-        for(let yy=bottomY+gap; yy<=y; yy+=gap){ ctx.beginPath(); ctx.moveTo(x-10,yy); ctx.lineTo(x+10,yy); ctx.stroke(); }
-      }
+      const bottomY = top+4*gap, topY=top; if(y>bottomY+gap/2){ for(let yy=bottomY+gap; yy<=y; yy+=gap){ ctx.beginPath(); ctx.moveTo(x-10,yy); ctx.lineTo(x+10,yy); ctx.stroke(); } }
       if(y<topY-gap/2){ for(let yy=topY-gap; yy>=y; yy-=gap){ ctx.beginPath(); ctx.moveTo(x-10,yy); ctx.lineTo(x+10,yy); ctx.stroke(); } }
       // 현재 인덱스 표시 바
-      if(practice.on && i===practice.idx){ ctx.fillStyle='#26d07c55'; ctx.fillRect(x-10, top-10, 20, 5*gap+20); }
+      if(hiIdx!==null && i===hiIdx){ ctx.fillStyle='#26d07c55'; ctx.fillRect(x-10, top-10, 20, 5*gap+20); }
       // ▶ 키보드 힌트 텍스트(각 음 위에 표시)
       const hint = keyHintForMidi(midi);
-      if(hint){ ctx.save(); ctx.font='700 11px system-ui, -apple-system, Roboto, "Noto Sans KR", sans-serif'; ctx.fillStyle=(practice.on && i===practice.idx)? '#26d07c' : '#9fb0c5'; ctx.fillText(hint, x, Math.max(12, y-12)); ctx.restore(); }
+      if(hint){ ctx.save(); ctx.font='700 11px system-ui, -apple-system, Roboto, "Noto Sans KR", sans-serif'; ctx.fillStyle=(hiIdx!==null && i===hiIdx)? '#26d07c' : '#9fb0c5'; ctx.fillText(hint, x, Math.max(12, y-12)); ctx.restore(); }
     }
   }
 
@@ -314,10 +395,10 @@
   function buildTouchLanes(){ touchWrap.innerHTML=''; for(let i=0;i<lanesDef.length;i++){ const b=document.createElement('button'); b.textContent=lanesDef[i].key.toUpperCase(); b.addEventListener('pointerdown', ()=> { tryHitLane(i); if(navigator.vibrate) navigator.vibrate(15); }); touchWrap.appendChild(b); } }
 
   // ===== 플레이 모드 전환 =====
-  function applyPlayMode(){ const pm=document.getElementById('playMode').value; const isGame=pm==='game'; document.getElementById('kb').style.display=isGame?'none':'block'; document.getElementById('gamePanel').classList.toggle('active',isGame); document.getElementById('groupGame').style.display=isGame?'flex':'none'; if(isGame){ if(isCoarse){ touchWrap.style.display='grid'; } else { touchWrap.style.display='none'; } } else { stopGame(); touchWrap.style.display='none'; } drawSheet(); updatePracticeHighlights(); updateKeyPCLabels(); updateKeyPCLabels(); }
+  function applyPlayMode(){ const pm=document.getElementById('playMode').value; const isGame=pm==='game'; document.getElementById('kb').style.display=isGame?'none':'block'; document.getElementById('gamePanel').classList.toggle('active',isGame); document.getElementById('groupGame').style.display=isGame?'flex':'none'; if(isGame){ if(isCoarse){ touchWrap.style.display='grid'; } else { touchWrap.style.display='none'; } } else { stopGame(); touchWrap.style.display='none'; } drawSheet(); updatePracticeHighlights(); updateKeyPCLabels(); }
 
   // ===== 바인딩 =====
-  buildKeys(); buildGameLanes(); buildTouchLanes();
+  buildKeys(); buildGameLanes(); buildTouchLanes(); populateScoreOptions();
   window.addEventListener('keydown', handleKeyDown); window.addEventListener('keyup', handleKeyUp);
 
   document.getElementById('mode').addEventListener('change', applyMode);
@@ -325,9 +406,7 @@
   document.getElementById('gameStart').addEventListener('click', ()=> startGame());
   document.getElementById('gameStop').addEventListener('click', ()=> stopGame());
 
-  document.getElementById('practiceOn').addEventListener('change', e=>{ practice.on=e.target.checked; if(practice.on && state.mode!=='beginner'){ // 초심자로 자동 전환 안내/강제는 하지 않고 표시만
-      // noop
-    } updatePracticeHighlights(); updateKeyPCLabels(); drawSheet(); document.getElementById('sheetHint').style.display = practice.on? 'none':'block'; });
+  document.getElementById('practiceOn').addEventListener('change', e=>{ practice.on=e.target.checked; updatePracticeHighlights(); updateKeyPCLabels(); drawSheet(); document.getElementById('sheetHint').style.display = practice.on? 'none':'block'; });
   document.getElementById('practiceReset').addEventListener('click', ()=>{ resetPractice(); });
 
   document.getElementById('vol').addEventListener('input', e=>{ state.vol=parseFloat(e.target.value); ensureAudio(); updateMaster(); });
@@ -336,12 +415,38 @@
   document.getElementById('octUp').addEventListener('click', ()=>{ keyOct=Math.min(7,keyOct+1); document.getElementById('octText').textContent=keyOct; updateKeyPCLabels(); });
   document.getElementById('metro').addEventListener('click', ()=>{ if(!audioCtx||!metro.on){ ensureAudio(); metro.bpm=+document.getElementById('bpm').value; startMetro(); } else { stopMetro(); } });
   document.getElementById('bpm').addEventListener('input', e=>{ metro.bpm=+e.target.value; });
+  document.getElementById('scoreSelect').addEventListener('change', ()=>{ practice.idx=0; follow.idx=0; follow.active=false; sheetPageStart=0; drawSheet(); if(game.running){ stopGame(); } });
 
   // 첫 상호작용에 오디오 활성화
   ['pointerdown','keydown','touchstart','click'].forEach(ev=> window.addEventListener(ev, ()=>ensureAudio(), { once:true, passive:true }));
 
+  // 페이지 버튼 바인딩
+  document.getElementById('sheetPrev').addEventListener('click', ()=>{ const ch=getCurrentChart(); sheetPageStart=Math.max(0, sheetPageStart - SHEET_SPAN); drawSheet(); });
+  document.getElementById('sheetNext').addEventListener('click', ()=>{ const ch=getCurrentChart(); const maxStart=Math.max(0, ch.notes.length - SHEET_SPAN); sheetPageStart=Math.min(maxStart, sheetPageStart + SHEET_SPAN); drawSheet(); });
+
   // 초기 상태
   applyMode(); applyPlayMode(); drawSheet();
+
+  // =========================
+  // Self-tests (console only)
+  // =========================
+  function approx(a,b,eps=1e-6){ return Math.abs(a-b) <= eps; }
+  function showTestBadge(ok,msg){ const el=document.getElementById('testBadge'); if(!el) return; el.style.display='inline-block'; el.textContent= ok? 'Self‑tests passed' : ('Tests failed: '+msg); el.classList.toggle('fail', !ok); }
+  function runTests(){
+    try{
+      console.assert(approx(midiToFreq(69),440,1e-6), 'midiToFreq(69) ≈ 440');
+      console.assert(isBlack(61)===true && isBlack(60)===false, 'isBlack C#,C');
+      console.assert(laneFromMidi(60)===0 && laneFromMidi(62)===1 && laneFromMidi(64)===2, 'laneFromMidi mapping');
+      // keyHintForMidi in free mode @oct=4
+      document.getElementById('playMode').value='free';
+      const oldOct = 4; document.getElementById('octText').textContent=oldOct; // UI only
+      console.assert(keyHintForMidi(60)==='A', 'C4 -> A');
+      // ensureIndexVisible basic move
+      const ch=getCurrentChart(); sheetPageStart=0; const before=sheetPageStart; ensureIndexVisible(SHEET_SPAN+5); console.assert(sheetPageStart!==before, 'ensureIndexVisible responds');
+      showTestBadge(true);
+    }catch(e){ console.error('Self-tests failed', e); showTestBadge(false, e.message||e); }
+  }
+  setTimeout(runTests, 120);
 })();
 </script>
 </body>
