@@ -1,355 +1,611 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>김은석 · Workspace</title>
-<meta name="description" content="개인 포트폴리오 & 워크스페이스" />
-<style>
-:root{
-  --card:#ffffff; --text:#e6edf6; --muted:#9fb0c5;
-  --accent:#7cc4ff; --accent2:#00e0b8;
-  --ring:0 0 0 3px rgba(34,211,238,.35); /* team-card:focus */
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body{font:16px/1.6 system-ui, Segoe UI, Roboto, "Apple SD Gothic Neo","Noto Sans KR", sans-serif;color:var(--text);min-height:100%;padding:24px 24px 24px 260px}
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>김은석 · Workspace</title>
+  <meta name="description" content="개인 포트폴리오 & 워크스페이스" />
 
-.bg{position:fixed;inset:0;z-index:-1;display:block;width:100%;height:100%;background:#000}
+  <style>
+    /* =========================
+       0) THEME VARIABLES
+       ========================= */
+    :root{
+      --card:#ffffff;
+      --text:#e6edf6;
+      --muted:#9fb0c5;
+      --accent:#7cc4ff;
+      --accent2:#00e0b8;
+      --ring:0 0 0 3px rgba(34,211,238,.35);
+    }
 
-.sidebar{position:fixed;top:0;left:0;height:100%;width:236px;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);border-right:1px solid rgba(255,255,255,.1);padding:28px 18px;z-index:10}
-.sidebar h2{font-size:20px;margin-bottom:14px}
-.cats{display:flex;flex-direction:column;gap:8px}
-.cats .cat{width:100%}
-.audioctl .row{display:flex;gap:8px}
-.audioctl .row .cat{width:auto;flex:1 1 0}
-.audioctl select{width:100%;max-width:100%}
-.audioctl .vol label{white-space:nowrap}
+    /* =========================
+       1) RESET / BASE
+       ========================= */
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    html,body{ height:100%; }
+    body{
+      font:16px/1.6 system-ui, Segoe UI, Roboto, "Apple SD Gothic Neo","Noto Sans KR", sans-serif;
+      color:var(--text);
+      min-height:100%;
+      padding:24px 24px 24px 260px; /* 사이드바 폭 + 여백 */
+    }
 
-.canvas{max-width:1280px;margin:0 auto;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
-.columns{display:grid;gap:22px;grid-template-columns:58% 42%}
+    /* 배경 캔버스 */
+    .bg{
+      position:fixed; inset:0; z-index:-1;
+      display:block; width:100%; height:100%;
+      background:#000; /* 로딩 중 임시색 */
+    }
 
-.cat{display:block;color:#fff;background:transparent;border:1px solid rgba(255,255,255,.25);padding:10px 12px;border-radius:10px;font-weight:800;text-align:left;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
-.cat:hover{background:rgba(255,255,255,.08)}
-.cat.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#001018;border-color:transparent}
+    /* =========================
+       2) LAYOUT
+       ========================= */
+    .sidebar{
+      position:fixed; top:0; left:0; height:100%; width:236px;
+      background:rgba(0,0,0,.35);
+      backdrop-filter:blur(8px);
+      border-right:1px solid rgba(255,255,255,.1);
+      padding:28px 18px;
+      z-index:10;
+    }
+    .sidebar h2{ font-size:20px; margin-bottom:14px; }
+    .cats{ display:flex; flex-direction:column; gap:8px; }
 
-.workspace .head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.workspace .head h3{margin:0;font-size:20px}
-.grid{display:grid;gap:14px;grid-template-columns:repeat(2,minmax(0,1fr))}
+    /* 오디오 컨트롤 레이아웃 보정 */
+    .cats .cat{ width:100%; }
+    .audioctl .row{ display:flex; gap:8px; }
+    .audioctl .row .cat{ width:auto; flex:1 1 0; }
+    .audioctl select{ width:100%; max-width:100%; }
+    .audioctl .vol label{ white-space:nowrap; }
 
-.cardlet{display:block;text-decoration:none;background:#fff;color:#0b1220;border:1px solid rgba(0,0,0,.08);border-radius:14px;overflow:hidden;min-height:150px;box-shadow:0 8px 20px rgba(0,0,0,.12);transition:transform .15s, box-shadow .15s}
-.cardlet:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.16)}
-.cardlet__thumb{position:relative;width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,#e2e8f0,#cbd5e1);overflow:hidden}
-.cardlet__thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.cardlet__body{padding:14px 16px}
-.cardlet__title{margin:0 0 6px;font-size:18px;font-weight:700}
-.cardlet__desc{margin:0;color:#475569;font-size:14px}
-.thumb-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;color:#0b1220;background:linear-gradient(135deg,#dbeafe,#bcf0da)}
+    .canvas{
+      max-width:1280px; margin:0 auto;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:22px;
+      padding:22px;
+      box-shadow:0 12px 40px rgba(0,0,0,.25);
+    }
 
-.block{background:#fff;color:#0b1220;border:1px solid rgba(0,0,0,.08);border-radius:18px;padding:22px;box-shadow:0 10px 28px rgba(0,0,0,.15)}
-.block h3{margin:0 0 10px;font-size:22px}
-.intro{min-height:160px}
-.desc{min-height:200px}
-footer{margin-top:14px;text-align:center;color:var(--muted)}
+    .columns{
+      display:grid; gap:22px;
+      grid-template-columns:58% 42%;
+    }
 
-.workspace-only .columns{grid-template-columns:1fr}
-.workspace-only .left{display:none}
+    /* =========================
+       3) COMPONENTS
+       ========================= */
+    .cat{
+      display:block; color:#fff; background:transparent;
+      border:1px solid rgba(255,255,255,.25);
+      padding:10px 12px; border-radius:10px; font-weight:800;
+      text-align:left; cursor:pointer;
+      transition:background .15s ease, border-color .15s ease, color .15s ease;
+    }
+    .cat:hover{ background:rgba(255,255,255,.08); }
+    .cat.active{
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      color:#001018; border-color:transparent;
+    }
 
-@media (max-width:980px){.columns{grid-template-columns:1fr}}
-@media (max-width:640px){
-  body{padding:16px}
-  .sidebar{position:static;width:auto;height:auto;border-right:none;border:1px solid rgba(255,255,255,.12);border-radius:16px;margin-bottom:12px}
-  .canvas{padding:16px}
-}
+    .workspace .head{
+      display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;
+    }
+    .workspace .head h3{ margin:0; font-size:20px; }
 
-.audioctl{margin-top:14px;display:flex;flex-direction:column;gap:8px}
-.audioctl .vol{display:flex;align-items:center;gap:8px;color:#e5e7eb;font-size:12px}
-.audioctl input[type="range"]{width:100%;accent-color:var(--accent)}
+    .grid{
+      display:grid; gap:14px;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
 
-/* === Team Grid (scoped) === */
-.team-container{max-width:1100px;margin:0 auto;padding:0 4px}
-.team-spacer{height:12px}
-.team-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-@media (min-width:540px){.team-grid{grid-template-columns:repeat(3,1fr)}}
-@media (min-width:880px){.team-grid{grid-template-columns:repeat(5,1fr)}}
-.team-card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px 12px;display:grid;place-items:center;gap:10px;text-align:center;transition:transform .2s, box-shadow .2s, border-color .2s;box-shadow:0 1px 0 rgba(0,0,0,.15)}
-.team-card:focus{outline:none;box-shadow:var(--ring)}
-@media (hover:hover){.team-card:hover{transform:translateY(-6px);border-color:rgba(34,211,238,.4);box-shadow:0 10px 24px rgba(0,0,0,.35)}}
-@media (hover:none){.team-card:active{transform:translateY(-4px);border-color:rgba(34,211,238,.35)}}
-.avatar{width:96px;height:96px;border-radius:50%;overflow:hidden;border:2px solid rgba(255,255,255,.12);background:#0f172a}
-.avatar img{width:100%;height:100%;object-fit:cover;display:block}
-.team-name{font-weight:800;letter-spacing:.2px}
-.team-gh{font-size:12px;color:var(--muted)}
-</style>
+    .cardlet{
+      display:block; text-decoration:none;
+      background:#fff; color:#0b1220;
+      border:1px solid rgba(0,0,0,.08);
+      border-radius:14px; overflow:hidden;
+      min-height:150px;
+      box-shadow:0 8px 20px rgba(0,0,0,.12);
+      transition:transform .15s ease, box-shadow .15s ease;
+    }
+    .cardlet:hover{ transform:translateY(-2px); box-shadow:0 12px 28px rgba(0,0,0,.16); }
+
+    .cardlet__thumb{
+      position:relative;
+      width:100%; aspect-ratio:16/9;
+      background:linear-gradient(135deg,#e2e8f0,#cbd5e1);
+      overflow:hidden;
+    }
+    .cardlet__thumb img{
+      width:100%; height:100%; object-fit:cover; display:block;
+    }
+
+    .cardlet__body{ padding:14px 16px; }
+    .cardlet__title{ margin:0 0 6px; font-size:18px; font-weight:700; }
+    .cardlet__desc{ margin:0; color:#475569; font-size:14px; }
+
+    .thumb-fallback{
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      font-weight:800; font-size:18px; color:#0b1220;
+      background:linear-gradient(135deg,#dbeafe,#bcf0da);
+    }
+
+    .block{
+      background:#fff; color:#0b1220;
+      border:1px solid rgba(0,0,0,.08);
+      border-radius:18px; padding:22px;
+      box-shadow:0 10px 28px rgba(0,0,0,.15);
+    }
+    .block h3{ margin:0 0 10px; font-size:22px; }
+    .intro{ min-height:160px; }
+    .desc{ min-height:200px; }
+
+    footer{ margin-top:14px; text-align:center; color:var(--muted); }
+
+    .workspace-only .columns{ grid-template-columns:1fr; }
+    .workspace-only .left{ display:none; }
+
+    @media (max-width:980px){
+      .columns{ grid-template-columns:1fr; }
+    }
+    @media (max-width:640px){
+      body{ padding:16px; }
+      .sidebar{
+        position:static; width:auto; height:auto;
+        border-right:none;
+        border:1px solid rgba(255,255,255,.12);
+        border-radius:16px;
+        margin-bottom:12px;
+      }
+      .canvas{ padding:16px; }
+    }
+
+    .audioctl{
+      margin-top:14px;
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .audioctl .vol{
+      display:flex; align-items:center; gap:8px;
+      color:#e5e7eb; font-size:12px;
+    }
+    .audioctl input[type="range"]{
+      width:100%;
+      accent-color: var(--accent);
+    }
+
+    /* =========================
+       4) TEAM GRID (수정 완료: 짤림 방지)
+       ========================= */
+    .team-container{max-width:100%;margin:0 auto;padding:0 4px} /* 컨테이너를 왼쪽 칼럼 폭에 맞춤 */
+
+    /* 칼럼 최소폭을 보장하며 자동으로 개수 조절 */
+    .team-grid{
+      display:grid;
+      gap:12px;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+    /* 아주 좁은 화면에서도 최소 2열 유지(필요 없으면 지워도 됨) */
+    @media (max-width:380px){
+      .team-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    /* 카드가 좁은 칼럼에서 내용으로 넘치지 않도록 */
+    .team-card{
+      background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px; padding:16px 12px;
+      display:grid; place-items:center; gap:10px; text-align:center;
+      transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+      box-shadow:0 1px 0 rgba(0,0,0,.15);
+      min-width:0; /* ✅ 핵심: 그리드 셀 안에서 내용이 넘치지 않게 */
+    }
+    .team-card:focus{ outline:none; box-shadow:var(--ring); }
+    @media (hover:hover){
+      .team-card:hover{ transform:translateY(-6px); border-color:rgba(34,211,238,.4); box-shadow:0 10px 24px rgba(0,0,0,.35); }
+    }
+    @media (hover:none){
+      .team-card:active{ transform:translateY(-4px); border-color:rgba(34,211,238,.35); }
+    }
+
+    /* 아바타가 칼럼 폭에 맞춰 유연하게 */
+    .avatar{
+      width: clamp(72px, 9vw, 96px);
+      height: clamp(72px, 9vw, 96px);
+      border-radius:50%; overflow:hidden;
+      border:2px solid rgba(255,255,255,.12); background:#0f172a;
+    }
+    .avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
+    .team-name{ font-weight:800; letter-spacing:.2px; }
+    .team-gh{ font-size:12px; color:var(--muted); }
+  </style>
 </head>
 <body>
 
-<canvas id="bgCanvas" class="bg"></canvas>
+  <!-- 배경 캔버스 -->
+  <canvas id="bgCanvas" class="bg"></canvas>
 
-<aside class="sidebar">
-  <h2>카테고리</h2>
-  <div class="cats">
-    <button class="cat active" data-cat="전체">전체</button>
-    <button class="cat" data-cat="게임">게임</button>
-    <button class="cat" data-cat="그림">그림</button>
-    <button class="cat" data-cat="기타">기타</button>
-  </div>
-
-  <div class="audioctl">
-    <div class="row" style="display:flex; gap:8px">
-      <button id="music-play" class="cat" type="button">▶ 재생</button>
-      <button id="music-pause" class="cat" type="button" disabled>⏸ 일시정지</button>
+  <!-- 사이드바 -->
+  <aside class="sidebar">
+    <h2>카테고리</h2>
+    <div class="cats">
+      <button class="cat active" data-cat="전체">전체</button>
+      <button class="cat" data-cat="게임">게임</button>
+      <button class="cat" data-cat="그림">그림</button>
+      <button class="cat" data-cat="기타">기타</button>
     </div>
-    <div class="vol">
-      <label for="music-vol">볼륨</label>
-      <input id="music-vol" type="range" min="0" max="1" step="0.01" value="0.4" />
-    </div>
-    <div class="vol" style="margin-top:4px">
-      <label for="music-track">트랙</label>
-      <select id="music-track"></select>
-    </div>
-  </div>
-</aside>
 
-<div class="canvas">
-  <div class="columns">
-    <div class="left">
-      <section class="block intro">
-        <h3>자기소개</h3>
-        <p>AI · 3D · GPT 실험을 기록하는 김은석입니다.<br>카테고리를 클릭하면 오른쪽에 해당 작업물만 표시됩니다.</p>
-      </section>
-
-      <section class="block desc" style="margin-top:14px">
-        <h3>설명</h3>
-        <p>카테고리를 바꿔도 페이지는 이동하지 않고 오른쪽 카드 목록만 바뀝니다.</p>
-      </section>
-
-      <!-- 팀원 소개 -->
-      <div id="about-team" class="team-container" style="padding-top:0; margin-top:14px">
-        <div class="team-spacer"></div>
-        <h3 style="margin:0 0 10px">팀원 소개</h3>
-        <div id="teamRoot" class="team-grid"></div>
+    <!-- 배경음악 컨트롤 -->
+    <div class="audioctl">
+      <div class="row" style="display:flex; gap:8px">
+        <button id="music-play" class="cat" type="button">▶ 재생</button>
+        <button id="music-pause" class="cat" type="button" disabled>⏸ 일시정지</button>
+      </div>
+      <div class="vol">
+        <label for="music-vol">볼륨</label>
+        <input id="music-vol" type="range" min="0" max="1" step="0.01" value="0.4" />
+      </div>
+      <div class="vol" style="margin-top:4px">
+        <label for="music-track">트랙</label>
+        <select id="music-track"></select>
       </div>
     </div>
+  </aside>
 
-    <div class="right workspace">
-      <div class="head">
-        <h3 id="ws-title">workspace · 전체</h3>
-        <small style="color:#cbd5e1">카드를 클릭하면 새 탭으로 이동</small>
+  <!-- 메인 -->
+  <div class="canvas">
+    <div class="columns">
+      <div class="left">
+        <section class="block intro">
+          <h3>자기소개</h3>
+          <p>AI · 3D · GPT 실험을 기록하는 김은석입니다.<br>
+             카테고리를 클릭하면 오른쪽에 해당 작업물만 표시됩니다.</p>
+        </section>
+
+        <section class="block desc" style="margin-top:14px">
+          <h3>설명</h3>
+          <p>카테고리를 바꿔도 페이지는 이동하지 않고<br>
+             오른쪽 카드 목록만 바뀝니다.</p>
+        </section>
+
+        <!-- 팀원 소개 -->
+        <div id="about-team" class="team-container" style="padding-top:0; margin-top:14px">
+          <div class="team-spacer"></div>
+          <h3 style="margin:0 0 10px">팀원 소개</h3>
+          <div id="teamRoot" class="team-grid"></div>
+        </div>
       </div>
-      <div id="grid" class="grid"></div>
+
+      <div class="right workspace">
+        <div class="head">
+          <h3 id="ws-title">workspace · 전체</h3>
+          <small style="color:#cbd5e1">카드를 클릭하면 새 탭으로 이동</small>
+        </div>
+        <div id="grid" class="grid"></div>
+      </div>
     </div>
+    <footer>© 2025 Eunseok Kim</footer>
   </div>
-  <footer>© 2025 Eunseok Kim</footer>
-</div>
 
-<!-- 1) 배경 파도 -->
-<script>
-(function(){
-  var canvas=document.getElementById('bgCanvas');
-  var ctx=canvas.getContext('2d',{alpha:true});
-  ctx.imageSmoothingEnabled=true;
-  var IMG_URL='https://ezekiel123581-cell.github.io/bg4.png';
-  var img=new Image(); img.crossOrigin='anonymous'; img.src=IMG_URL;
-  var vw=0,vh=0,offscreen,octx;
-  var amplitude=9,wavelength=200,speed=0.3,tilt=0.25,PADDING=Math.ceil(amplitude*1.25)+2;
+  <!-- ===================== SCRIPTS ===================== -->
 
-  function resize(){
-    vw=canvas.width=window.innerWidth; vh=canvas.height=window.innerHeight;
-    offscreen=document.createElement('canvas'); offscreen.width=vw; offscreen.height=vh+2*PADDING; octx=offscreen.getContext('2d');
-    drawBaseImage();
-  }
-  function drawBaseImage(){
-    if(!img.complete) return;
-    var iw=img.naturalWidth, ih=img.naturalHeight; var r=Math.max(vw/iw,vh/ih);
-    var dw=iw*r, dh=ih*r, dx=(vw-dw)*.5, dy=(vh-dh)*.5;
-    octx.clearRect(0,0,offscreen.width,offscreen.height);
-    octx.drawImage(img,dx,dy+PADDING,dw,dh);
-    octx.drawImage(offscreen,0,PADDING,vw,1,0,0,vw,PADDING);
-    octx.drawImage(offscreen,0,vh+PADDING-1,vw,1,0,vh+PADDING,vw,PADDING);
-  }
-  var t0=0;
-  function animate(ts){
-    if(!t0) t0=ts; ctx.clearRect(0,0,vw,vh);
-    var SLICE_W=2, time=(ts-t0)/1000;
-    for(var x=0;x<vw;x+=SLICE_W){
-      var progress=x/vw, localAmp=amplitude*(0.4+0.6*progress);
-      var yOffset=Math.sin((x+time*speed*180)/wavelength*(Math.PI*2)+progress*tilt)*localAmp;
-      ctx.drawImage(offscreen,x,0,SLICE_W,vh+2*PADDING, x,yOffset-PADDING,SLICE_W,vh+2*PADDING);
+  <!-- 1) 배경 파도 -->
+  <script>
+    (function(){
+      var canvas = document.getElementById('bgCanvas');
+      var ctx = canvas.getContext('2d', { alpha: true });
+      ctx.imageSmoothingEnabled = true;
+
+      var IMG_URL = 'https://ezekiel123581-cell.github.io/bg4.png';
+      var img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = IMG_URL;
+
+      var vw=0, vh=0, offscreen, octx;
+      var amplitude=9, wavelength=200, speed=0.3, tilt=0.25;
+      var PADDING = Math.ceil(amplitude*1.25)+2;
+
+      function resize(){
+        vw = canvas.width  = window.innerWidth;
+        vh = canvas.height = window.innerHeight;
+
+        offscreen = document.createElement('canvas');
+        offscreen.width  = vw;
+        offscreen.height = vh + 2*PADDING;
+        octx = offscreen.getContext('2d');
+
+        drawBaseImage();
+      }
+
+      function drawBaseImage(){
+        if(!img.complete) return;
+        var iw=img.naturalWidth, ih=img.naturalHeight;
+        var r  = Math.max(vw/iw, vh/ih);
+        var dw = iw*r, dh=ih*r;
+        var dx = (vw-dw)*.5, dy=(vh-dh)*.5;
+
+        octx.clearRect(0,0,offscreen.width,offscreen.height);
+        octx.drawImage(img, dx, dy + PADDING, dw, dh);
+        octx.drawImage(offscreen, 0, PADDING, vw, 1, 0, 0, vw, PADDING);
+        octx.drawImage(offscreen, 0, vh + PADDING - 1, vw, 1, 0, vh + PADDING, vw, PADDING);
+      }
+
+      var t0=0;
+      function animate(ts){
+        if(!t0) t0=ts;
+        ctx.clearRect(0,0,vw,vh);
+        var SLICE_W=2, time=(ts-t0)/1000;
+        for(var x=0; x<vw; x+=SLICE_W){
+          var progress=x/vw;
+          var localAmp=amplitude*(0.4+0.6*progress);
+          var yOffset=Math.sin((x + time*speed*180)/wavelength*(Math.PI*2) + progress*tilt) * localAmp;
+          ctx.drawImage(offscreen, x,0,SLICE_W,vh+2*PADDING, x, yOffset-PADDING, SLICE_W, vh+2*PADDING);
+        }
+        requestAnimationFrame(animate);
+      }
+
+      img.onload = function(){ resize(); requestAnimationFrame(animate); };
+      window.addEventListener('resize', resize);
+    })();
+  </script>
+
+  <!-- 2) 카드/카테고리 -->
+  <script>
+    var items = [
+      { title:'GitHub', desc:'소스와 저장소', href:'https://github.com/ezekiel123581-cell', cat:'기타',  thumb:'./thumb/img%205.JPG' },
+      { title:'시각예술시뮬레이터', desc:'시각 실험 데모', href:'./simulator.html', cat:'그림', thumb:'./thumb/img%203.JPG' },
+      { title:'GPT · 지구 칵테일', desc:'나만의 GPT – 지구 칵테일', href:'https://chatgpt.com/g/g-68b834ee2d4c8191b9ce84960a9aeda8-jigu-kagteil', cat:'기타', thumb:'./thumb/img%202.JPG' },
+      { title:'GPT · 요리 레시피를 알려주는 쥐', desc:'나만의 GPT – 요리 도우미', href:'https://chatgpt.com/g/g-68b81a61f75c8191a19abbbe0d553797-yoriresipireul-alryeojuneun-jwi', cat:'기타', thumb:'./thumb/img%201.JPG' },
+      { title:'피아노', desc:'피아노 시뮬레이터', href:'./piano.html', cat:'게임', thumb:'./thumb/img%206.JPG' },
+      { title:'드로잉 · Grim', desc:'캔버스 드로잉 데모', href:'./Grim.html', cat:'그림', thumb:'./thumb/img%204.JPG' }
+    ];
+
+    var grid  = document.getElementById('grid');
+    var titleEl = document.getElementById('ws-title');
+
+    function makePlaceholder(text){
+      text = (text || '').trim().replace(/^GPT\s*·\s*/i,'');
+      var lettersOnly = text.replace(/[^A-Za-z\uAC00-\uD7A3]/g, '');
+      var initials = (lettersOnly.slice(0,2) || 'WS').toUpperCase();
+      var div = document.createElement('div');
+      div.className = 'thumb-fallback';
+      div.textContent = initials;
+      return div;
     }
-    requestAnimationFrame(animate);
-  }
-  img.onload=function(){resize();requestAnimationFrame(animate)};
-  window.addEventListener('resize',resize);
-})();
-</script>
 
-<!-- 2) 카드/카테고리 -->
-<script>
-var items=[
-  {title:'GitHub',desc:'소스와 저장소',href:'https://github.com/ezekiel123581-cell',cat:'기타',thumb:'./thumb/img%205.JPG'},
-  {title:'시각예술시뮬레이터',desc:'시각 실험 데모',href:'./simulator.html',cat:'그림',thumb:'./thumb/img%203.JPG'},
-  {title:'GPT · 지구 칵테일',desc:'나만의 GPT – 지구 칵테일',href:'https://chatgpt.com/g/g-68b834ee2d4c8191b9ce84960a9aeda8-jigu-kagteil',cat:'기타',thumb:'./thumb/img%202.JPG'},
-  {title:'GPT · 요리 레시피를 알려주는 쥐',desc:'나만의 GPT – 요리 도우미',href:'https://chatgpt.com/g/g-68b81a61f75c8191a19abbbe0d553797-yoriresipireul-alryeojuneun-jwi',cat:'기타',thumb:'./thumb/img%201.JPG'},
-  {title:'피아노',desc:'피아노 시뮬레이터',href:'./piano.html',cat:'게임',thumb:'./thumb/img%206.JPG'},
-  {title:'드로잉 · Grim',desc:'캔버스 드로잉 데모',href:'./Grim.html',cat:'그림',thumb:'./thumb/img%204.JPG'}
-];
-var grid=document.getElementById('grid');
-var titleEl=document.getElementById('ws-title');
+    function render(category){
+      if (typeof category === 'undefined') category = '전체';
+      grid.innerHTML='';
+      var filtered = category==='전체' ? items : items.filter(function(it){ return it.cat===category; });
 
-function makePlaceholder(text){
-  text=(text||'').trim().replace(/^GPT\s*·\s*/i,'');
-  var lettersOnly=text.replace(/[^A-Za-z\uAC00-\uD7A3]/g,'');
-  var initials=(lettersOnly.slice(0,2)||'WS').toUpperCase();
-  var div=document.createElement('div'); div.className='thumb-fallback'; div.textContent=initials; return div;
-}
+      if(filtered.length===0){
+        grid.innerHTML = '<div class="empty">이 카테고리에 표시할 작업이 없습니다.</div>';
+        return;
+      }
 
-function render(category){
-  category=(category===undefined)?'전체':category;
-  grid.innerHTML='';
-  var filtered=category==='전체'?items:items.filter(function(it){return it.cat===category});
-  if(filtered.length===0){ grid.innerHTML='<div class="empty">이 카테고리에 표시할 작업이 없습니다.</div>'; return; }
-  filtered.forEach(function(it){
-    var a=document.createElement('a'); a.className='cardlet';
-    var thumbWrap=document.createElement('div'); thumbWrap.className='cardlet__thumb';
-    if(it.thumb){
-      var img=document.createElement('img'); img.loading='lazy'; img.decoding='async'; img.alt=it.title+' 미리보기'; img.src=it.thumb;
-      img.addEventListener('error',function(){thumbWrap.innerHTML='';thumbWrap.appendChild(makePlaceholder(it.title))});
-      thumbWrap.appendChild(img);
-    }else{ thumbWrap.appendChild(makePlaceholder(it.title)); }
-    var body=document.createElement('div'); body.className='cardlet__body';
-    body.innerHTML='<h4 class="cardlet__title">'+it.title+'</h4><p class="cardlet__desc">'+it.desc+'</p>';
-    if(it.disabled){ a.href='javascript:void(0)'; a.style.opacity=.6; a.style.pointerEvents='none'; }
-    else{ a.href=it.href; a.target='_blank'; a.rel='noopener'; }
-    a.appendChild(thumbWrap); a.appendChild(body); grid.appendChild(a);
-  });
-  titleEl.textContent='workspace · '+category;
-}
-render('전체');
-document.body.classList.remove('workspace-only');
+      filtered.forEach(function(it){
+        var a = document.createElement('a');
+        a.className = 'cardlet';
 
-Array.prototype.forEach.call(document.querySelectorAll('.cats .cat'), function(btn){
-  btn.addEventListener('click', function(){
-    Array.prototype.forEach.call(document.querySelectorAll('.cats .cat'), function(b){ b.classList.remove('active'); });
-    btn.classList.add('active');
-    var cat=btn.getAttribute('data-cat')||'전체';
-    render(cat);
-    if(cat==='전체') document.body.classList.remove('workspace-only');
-    else document.body.classList.add('workspace-only');
-  });
-});
-</script>
+        var thumbWrap = document.createElement('div');
+        thumbWrap.className = 'cardlet__thumb';
 
-<!-- 3) 배경음악 -->
-<script>
-var AUDIO_BASE='https://ezekiel123581-cell.github.io/';
-var RAW_BASE='https://raw.githubusercontent.com/ezekiel123581-cell/ezekiel123581-cell.github.io/main/';
-var FILENAMES=['Untitled (1).mp3','Untitled.mp3','君の中にある赤い線と青い線 (1).mp3','君の中にある赤い線と青い線.mp3','君の中にある赤い線と青い線 (3).mp3','君の中にある赤い線と青い線 (2).mp3','The red line and blue line within you.mp3','The red line and blue line within you (1).mp3'];
-var PLAYLIST=FILENAMES.map(function(name){var enc=encodeURIComponent(name);return{title:name.replace(/\.mp3$/i,''),pages:AUDIO_BASE+enc,raw:RAW_BASE+enc}});
-var idxStored=localStorage.getItem('bgmIndex'); var currentIndex=Math.min(Math.max(parseInt(idxStored||'0',10)||0,0),PLAYLIST.length-1);
-var savedVol=parseFloat(localStorage.getItem('bgmVol')??'0.4'); var savedOn=localStorage.getItem('bgmOn')==='1';
-var bgm=new Audio(PLAYLIST[currentIndex].pages); bgm.loop=false; bgm.preload='auto'; bgm.volume=isFinite(savedVol)?savedVol:0.4;
+        if (it.thumb){
+          var img = document.createElement('img');
+          img.loading = 'lazy';
+          img.decoding = 'async';
+          img.alt = it.title + ' 미리보기';
+          img.src = it.thumb;
+          img.addEventListener('error', function(){
+            thumbWrap.innerHTML = '';
+            thumbWrap.appendChild(makePlaceholder(it.title));
+          });
+          thumbWrap.appendChild(img);
+        } else {
+          thumbWrap.appendChild(makePlaceholder(it.title));
+        }
 
-var $vol=document.getElementById('music-vol');
-var $track=document.getElementById('music-track');
-var $playBtn=document.getElementById('music-play');
-var $pauseBtn=document.getElementById('music-pause');
+        var body = document.createElement('div');
+        body.className = 'cardlet__body';
+        body.innerHTML = '<h4 class="cardlet__title">' + it.title + '</h4><p class="cardlet__desc">' + it.desc + '</p>';
 
-function updateUiPlaying(p){ if($playBtn&&$pauseBtn){ $playBtn.disabled=p; $pauseBtn.disabled=!p; } }
-updateUiPlaying(false);
+        if(it.disabled){
+          a.href = 'javascript:void(0)';
+          a.style.opacity = .6;
+          a.style.pointerEvents = 'none';
+        } else {
+          a.href = it.href;
+          a.target = '_blank';
+          a.rel = 'noopener';
+        }
 
-if($track){
-  $track.innerHTML=PLAYLIST.map(function(t,i){
-    var base=(t.title||'').split('(')[0].trim();
-    var short=base.length>12?base.slice(0,11)+'…':base; /* NN· + 12 = ≤16 */
-    return '<option value="'+i+'">'+((i+1<10?'0':'')+(i+1))+' · '+short+'</option>';
-  }).join('');
-  $track.value=String(currentIndex);
-}
-if($vol) $vol.value=String(bgm.volume);
+        a.appendChild(thumbWrap);
+        a.appendChild(body);
+        grid.appendChild(a);
+      });
 
-function fadeTo(target,ms){target=Math.max(0,Math.min(1,target));ms=ms||400;var steps=24,dt=ms/steps,start=bgm.volume,i=0;var timer=setInterval(function(){i++;bgm.volume=start+(target-start)*(i/steps);if(i>=steps)clearInterval(timer)},dt)}
-function tryPlay(){return bgm.play().catch(function(e){console.warn('Play blocked/failed:',e);throw e})}
+      titleEl.textContent = 'workspace · ' + category;
+    }
+    render('전체');
+    document.body.classList.remove('workspace-only');
 
-function addFallbackOnce(wasPlaying,keepVol){
-  var tried=false; bgm.onerror=function(){
-    if(!tried){ tried=true; bgm.src=PLAYLIST[currentIndex].raw+'?v='+Date.now(); if(wasPlaying){tryPlay().then(function(){fadeTo(keepVol,300);updateUiPlaying(true)}).catch(function(){})}}
-    else{ nextTrack(); }
-  };
-}
-function setTrack(index,opts){
-  opts=opts||{}; var autoplay=!!opts.autoplay;
-  currentIndex=(index+PLAYLIST.length)%PLAYLIST.length; localStorage.setItem('bgmIndex',String(currentIndex));
-  var keepVol=bgm.volume; var wasPlaying=autoplay||!bgm.paused;
-  try{bgm.pause()}catch(_){}
-  bgm.src=PLAYLIST[currentIndex].pages+'?v='+Date.now(); bgm.currentTime=0; bgm.volume=keepVol; addFallbackOnce(wasPlaying,keepVol);
-  if($track) $track.value=String(currentIndex);
-  if(wasPlaying){ tryPlay().then(function(){fadeTo(keepVol,300);updateUiPlaying(true)}).catch(function(){}) }
-}
-function nextTrack(){ setTrack(currentIndex+1,{autoplay:!bgm.paused}) }
-function prevTrack(){ setTrack(currentIndex-1,{autoplay:!bgm.paused}) }
-bgm.addEventListener('ended',nextTrack);
+    Array.prototype.forEach.call(document.querySelectorAll('.cats .cat'), function(btn){
+      btn.addEventListener('click', function(){
+        Array.prototype.forEach.call(document.querySelectorAll('.cats .cat'), function(b){ b.classList.remove('active'); });
+        btn.classList.add('active');
 
-function safeVol(){return $vol?parseFloat($vol.value):0.4}
-function playBgm(){ bgm.muted=false; tryPlay().then(function(){fadeTo(safeVol(),300);updateUiPlaying(true);localStorage.setItem('bgmOn','1')}).catch(function(e){console.warn('Autoplay blocked:',e)}) }
-function pauseBgm(){ fadeTo(0,250); setTimeout(function(){bgm.pause()},260); updateUiPlaying(false); localStorage.setItem('bgmOn','0') }
+        var cat = btn.getAttribute('data-cat') || '전체';
+        render(cat);
 
-if($playBtn) $playBtn.addEventListener('click',playBgm);
-if($pauseBtn) $pauseBtn.addEventListener('click',pauseBgm);
-if($vol) $vol.addEventListener('input',function(e){var v=parseFloat(e.target.value);bgm.volume=v;localStorage.setItem('bgmVol',String(v))});
-if($track) $track.addEventListener('change',function(e){setTrack(parseInt(e.target.value||'0',10),{autoplay:!bgm.paused})});
+        if (cat === '전체') {
+          document.body.classList.remove('workspace-only');
+        } else {
+          document.body.classList.add('workspace-only');
+        }
+      });
+    });
+  </script>
 
-var wasPlaying=false;
-document.addEventListener('visibilitychange',function(){ if(document.hidden){wasPlaying=!bgm.paused;if(wasPlaying)pauseBgm()} else {if(wasPlaying)playBgm()} });
-if(savedOn){
-  var unlock=function(){ if(bgm.paused) playBgm(); window.removeEventListener('pointerdown',unlock); window.removeEventListener('keydown',unlock) };
-  window.addEventListener('pointerdown',unlock); window.addEventListener('keydown',unlock);
-  updateUiPlaying(true);
-}
-</script>
+  <!-- 3) 배경음악 -->
+  <script>
+    var AUDIO_BASE = 'https://ezekiel123581-cell.github.io/';
+    var RAW_BASE   = 'https://raw.githubusercontent.com/ezekiel123581-cell/ezekiel123581-cell.github.io/main/';
 
-<!-- 4) Self-test & 팀 그리드 mount -->
-<script>
-(function selfTest(){
-  try{
-    console.group('Self-test');
-    console.assert(typeof updateUiPlaying==='function','updateUiPlaying exists');
-    updateUiPlaying(true);
-    console.assert(document.getElementById('music-play').disabled===true && document.getElementById('music-pause').disabled===false,'Play/Pause toggle');
+    var FILENAMES = [
+      'Untitled (1).mp3','Untitled.mp3',
+      '君の中にある赤い線と青い線 (1).mp3','君の中にある赤い線と青い線.mp3',
+      '君の中にある赤い線と青い線 (3).mp3','君の中にある赤い線と青い線 (2).mp3',
+      'The red line and blue line within you.mp3','The red line and blue line within you (1).mp3'
+    ];
+
+    var PLAYLIST = FILENAMES.map(function(name){
+      var enc = encodeURIComponent(name);
+      return { title: name.replace(/\.mp3$/i,''), pages: AUDIO_BASE + enc, raw: RAW_BASE + enc };
+    });
+
+    var idxStored    = localStorage.getItem('bgmIndex');
+    var currentIndex = Math.min(Math.max(parseInt(idxStored||'0',10)||0, 0), PLAYLIST.length-1);
+
+    var savedVol = parseFloat(localStorage.getItem('bgmVol') ?? '0.4');
+    var savedOn  = localStorage.getItem('bgmOn') === '1';
+
+    var bgm = new Audio(PLAYLIST[currentIndex].pages);
+    bgm.loop = false;
+    bgm.preload = 'auto';
+    bgm.volume = isFinite(savedVol) ? savedVol : 0.4;
+
+    var $vol      = document.getElementById('music-vol');
+    var $track    = document.getElementById('music-track');
+    var $playBtn  = document.getElementById('music-play');
+    var $pauseBtn = document.getElementById('music-pause');
+
+    function updateUiPlaying(p){ if($playBtn&&$pauseBtn){ $playBtn.disabled=p; $pauseBtn.disabled=!p; } }
     updateUiPlaying(false);
-    console.assert(document.getElementById('music-play').disabled===false && document.getElementById('music-pause').disabled===true,'Pause/Play toggle');
-    console.assert(Array.isArray(PLAYLIST)&&PLAYLIST.length>0,'Playlist exists');
-    console.assert(typeof render==='function','render exists');
-    var $track=document.getElementById('music-track');
-    if($track&&$track.options&&$track.options.length){
-      var okLen=Array.prototype.every.call($track.options,function(o){return o.text.length<=16});
-      console.assert(okLen,'Option text length <= 16');
-    }
-    console.log('OK');
-  }catch(e){ console.error('Self-test failed',e); }
-  console.groupEnd();
-})();
 
-(function(){
-  const TEAM=[
-    {name:'PM.박',img:'./team/1.png',github:'https://newfacesandnewfacess.github.io/poly-data/'},
-    {name:'PM.임',img:'./team/2.png',github:'https://a85339559-sys.github.io/ljh6625/'},
-    {name:'PM.김One',img:'./team/3.png',github:'https://ezekiel123581-cell.github.io/'},
-    {name:'PM.김Two',img:'./team/4.png',github:'https://skymoon9577.github.io/first/'},
-    {name:'PM.신',img:'./team/5.png',github:'https://hyororo88.github.com/your-shin'}
-  ];
-  const AVATAR_PLACEHOLDER=`data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='100%' height='100%' fill='%23111a2e'/><text x='50%' y='50%' fill='%23566' font-size='14' font-family='system-ui' dominant-baseline='middle' text-anchor='middle'>No Image</text></svg>`;
-  function escapeHTML(s){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
-  const root=document.getElementById('teamRoot'); if(!root) return;
-  root.innerHTML=TEAM.map(m=>`
-    <a class="team-card" href="${m.github}" target="_blank" rel="noopener" aria-label="${escapeHTML(m.name)}의 GitHub로 이동">
-      <span class="avatar"><img src="${m.img}" alt="${escapeHTML(m.name)} 사진" loading="lazy" decoding="async"></span>
-      <span class="team-name">${escapeHTML(m.name)}</span>
-      <span class="team-gh">GitHub 방문</span>
-    </a>`).join('');
-  root.querySelectorAll('.avatar img').forEach(img=>{img.addEventListener('error',()=>{img.src=AVATAR_PLACEHOLDER})});
-})();
-</script>
+    if($track){
+      $track.innerHTML = PLAYLIST.map(function(t,i){
+        var base = (t.title||'').split('(')[0].trim();
+        var short = base.length>12 ? base.slice(0,11)+'…' : base;
+        return '<option value="'+i+'">'+((i+1<10?'0':'')+(i+1))+' · '+short+'</option>';
+      }).join('');
+      $track.value = String(currentIndex);
+    }
+    if($vol) $vol.value = String(bgm.volume);
+
+    function fadeTo(target, ms){
+      target = Math.max(0, Math.min(1, target)); ms = ms||400;
+      var steps=24, dt=ms/steps, start=bgm.volume, i=0;
+      var timer=setInterval(function(){ i++; bgm.volume = start + (target-start)*(i/steps); if(i>=steps) clearInterval(timer); }, dt);
+    }
+    function tryPlay(){ return bgm.play().catch(function(e){ console.warn('Play blocked/failed:', e); throw e; }); }
+
+    function addFallbackOnce(wasPlaying, keepVol){
+      var tried=false;
+      bgm.onerror = function(){
+        if(!tried){
+          tried=true;
+          bgm.src = PLAYLIST[currentIndex].raw + '?v=' + Date.now();
+          if(wasPlaying){
+            tryPlay().then(function(){ fadeTo(keepVol,300); updateUiPlaying(true); }).catch(function(){});
+          }
+        }else{
+          nextTrack();
+        }
+      };
+    }
+
+    function setTrack(index, opts){
+      opts = opts||{}; var autoplay = !!opts.autoplay;
+      currentIndex = (index + PLAYLIST.length) % PLAYLIST.length;
+      localStorage.setItem('bgmIndex', String(currentIndex));
+
+      var keepVol = bgm.volume;
+      var wasPlaying = autoplay || !bgm.paused;
+
+      try{ bgm.pause(); }catch(_){}
+      bgm.src = PLAYLIST[currentIndex].pages + '?v=' + Date.now();
+      bgm.currentTime = 0;
+      bgm.volume = keepVol;
+
+      addFallbackOnce(wasPlaying, keepVol);
+
+      if($track) $track.value = String(currentIndex);
+      if(wasPlaying){
+        tryPlay().then(function(){ fadeTo(keepVol,300); updateUiPlaying(true); }).catch(function(){});
+      }
+    }
+
+    function nextTrack(){ setTrack(currentIndex+1, {autoplay: !bgm.paused}); }
+    function prevTrack(){ setTrack(currentIndex-1, {autoplay: !bgm.paused}); }
+    bgm.addEventListener('ended', nextTrack);
+
+    function safeVol(){ return $vol ? parseFloat($vol.value) : 0.4; }
+    function playBgm(){
+      bgm.muted = false;
+      tryPlay().then(function(){ fadeTo(safeVol(),300); updateUiPlaying(true); localStorage.setItem('bgmOn','1'); })
+               .catch(function(e){ console.warn('Autoplay blocked:', e); });
+    }
+    function pauseBgm(){
+      fadeTo(0,250); setTimeout(function(){ bgm.pause(); },260);
+      updateUiPlaying(false);
+      localStorage.setItem('bgmOn','0');
+    }
+
+    if($playBtn)  $playBtn.addEventListener('click', playBgm);
+    if($pauseBtn) $pauseBtn.addEventListener('click', pauseBgm);
+    if($vol) $vol.addEventListener('input', function(e){
+      var v = parseFloat(e.target.value); bgm.volume = v; localStorage.setItem('bgmVol', String(v));
+    });
+    if($track) $track.addEventListener('change', function(e){
+      setTrack(parseInt(e.target.value||'0',10), {autoplay: !bgm.paused});
+    });
+
+    var wasPlaying = false;
+    document.addEventListener('visibilitychange', function(){
+      if(document.hidden){ wasPlaying = !bgm.paused; if(wasPlaying) pauseBgm(); }
+      else { if(wasPlaying) playBgm(); }
+    });
+    if(savedOn){
+      var unlock=function(){ if(bgm.paused) playBgm(); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown',  unlock); };
+      window.addEventListener('pointerdown', unlock);
+      window.addEventListener('keydown',  unlock);
+      updateUiPlaying(true);
+    }
+  </script>
+
+  <!-- 4) Self-test(옵션) & 팀 그리드 mount -->
+  <script>
+    (function(){
+      const TEAM = [
+        { name:'PM.박',   img:'./team/1.png', github:'https://newfacesandnewfacess.github.io/poly-data/' },
+        { name:'PM.임',   img:'./team/2.png', github:'https://a85339559-sys.github.io/ljh6625/' },
+        { name:'PM.김One',img:'./team/3.png', github:'https://ezekiel123581-cell.github.io/' },
+        { name:'PM.김Two',img:'./team/4.png', github:'https://skymoon9577.github.io/first/' },
+        { name:'PM.신',   img:'./team/5.png', github:'https://github.com/your-shin' }
+      ];
+
+      const AVATAR_PLACEHOLDER =
+        `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='100%' height='100%' fill='%23111a2e'/><text x='50%' y='50%' fill='%23566' font-size='14' font-family='system-ui' dominant-baseline='middle' text-anchor='middle'>No Image</text></svg>`;
+
+      function escapeHTML(s){
+        return String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+      }
+
+      const root = document.getElementById('teamRoot');
+      if(!root) return;
+
+      root.innerHTML = TEAM.map(m => `
+        <a class="team-card" href="${m.github}" target="_blank" rel="noopener" aria-label="${escapeHTML(m.name)}의 GitHub로 이동">
+          <span class="avatar"><img src="${m.img}" alt="${escapeHTML(m.name)} 사진" loading="lazy" decoding="async"></span>
+          <span class="team-name">${escapeHTML(m.name)}</span>
+          <span class="team-gh">GitHub 방문</span>
+        </a>
+      `).join('');
+
+      root.querySelectorAll('.avatar img').forEach(img=>{
+        img.addEventListener('error', ()=>{ img.src = AVATAR_PLACEHOLDER; });
+      });
+    })();
+  </script>
 
 </body>
 </html>
