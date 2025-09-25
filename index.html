@@ -483,9 +483,10 @@ Array.prototype.forEach.call(document.querySelectorAll('.cats .cat'), function(b
   });
 });
 
-/* ===== Background Music ===== */
-/* ===== Background Music: Playlist (Repeat-All) ===== */
-var AUDIO_BASE = 'https://ezekiel123581-cell.github.io/';  // <- 네 오디오 폴더 URL로 수정
+<script>
+/* ===== Background Music (Pages + Raw fallback) ===== */
+var AUDIO_BASE = 'https://ezekiel123581-cell.github.io/'; // 루트에 mp3 있을 때
+var RAW_BASE   = 'https://raw.githubusercontent.com/ezekiel123581-cell/ezekiel123581-cell.github.io/main/';
 
 var FILENAMES = [
   'Untitled (1).mp3',
@@ -497,144 +498,138 @@ var FILENAMES = [
   'The red line and blue line within you.mp3',
   'The red line and blue line within you (1).mp3'
 ];
-   
 
- var PLAYLIST = FILENAMES.map(function(name){
-   return {
-     title: name.replace(/\.mp3$/i, ''),
-     src: AUDIO_BASE + encodeURIComponent(name)  // ✅ 파일명만 인코딩
-   };
- });
-var idxStored = localStorage.getItem('bgmIndex');
-var idxParsed = parseInt(idxStored != null ? idxStored : '0', 10);
-var currentIndex = Math.min(Math.max(isNaN(idxParsed) ? 0 : idxParsed, 0), PLAYLIST.length - 1);
+// Pages/Raw 둘 다 가진 플레이리스트
+var PLAYLIST = FILENAMES.map(function(name){
+  var enc = encodeURIComponent(name);
+  return {
+    title: name.replace(/\.mp3$/i,''),
+    pages: AUDIO_BASE + enc,
+    raw:   RAW_BASE   + enc
+  };
+});
 
-var savedVolStored = localStorage.getItem('bgmVol');
-var savedVol = savedVolStored !== null ? parseFloat(savedVolStored) : 0.4;
+var idxStored    = localStorage.getItem('bgmIndex');
+var currentIndex = Math.min(Math.max(parseInt(idxStored||'0',10)||0, 0), PLAYLIST.length-1);
+
+var savedVol = parseFloat(localStorage.getItem('bgmVol') ?? '0.4');
 var savedOn  = localStorage.getItem('bgmOn') === '1';
 
-var bgm = new Audio(PLAYLIST[currentIndex].src);
-bgm.loop = false;          // 한 곡 반복 X (플레이리스트 반복으로 처리)
+var bgm = new Audio(PLAYLIST[currentIndex].pages);
+bgm.loop = false;
 bgm.preload = 'auto';
 bgm.volume = isFinite(savedVol) ? savedVol : 0.4;
 
-var $vol    = document.getElementById('music-vol');
-var $track  = document.getElementById('music-track');
-var $playBtn = document.getElementById('music-play');
+var $vol      = document.getElementById('music-vol');
+var $track    = document.getElementById('music-track');
+var $playBtn  = document.getElementById('music-play');
 var $pauseBtn = document.getElementById('music-pause');
-function updateUiPlaying(isPlaying){
-  if ($playBtn && $pauseBtn){
-    $playBtn.disabled = isPlaying;
-    $pauseBtn.disabled = !isPlaying;
-  }
-}
+
+function updateUiPlaying(p){ if($playBtn&&$pauseBtn){ $playBtn.disabled=p; $pauseBtn.disabled=!p; } }
 updateUiPlaying(false);
 
-if ($vol) $vol.value = String(bgm.volume);
-if ($track){
-  $track.innerHTML = PLAYLIST.map(function(t, i){
-    var full = t.title || '';
-    var idxParen = full.indexOf('(');
-    var cleaned = idxParen > -1 ? full.slice(0, idxParen).trim() : full;
-    var short = cleaned.length > 12 ? (cleaned.slice(0, 11) + '…') : cleaned;
-    var label = (i+1 < 10 ? '0' : '') + (i+1) + ' · ' + short;
-    return '<option value="' + i + '">' + label + '</option>';
+if($track){
+  $track.innerHTML = PLAYLIST.map(function(t,i){
+    var base = (t.title||'').split('(')[0].trim();
+    var short = base.length>12 ? base.slice(0,11)+'…' : base;
+    return '<option value="'+i+'">'+((i+1<10?'0':'')+(i+1))+' · '+short+'</option>';
   }).join('');
   $track.value = String(currentIndex);
 }
+if($vol) $vol.value = String(bgm.volume);
 
+// 부드러운 볼륨 페이드
 function fadeTo(target, ms){
-  if (typeof target === 'undefined') target = 1;
-  if (typeof ms === 'undefined') ms = 500;
-  var steps = 24, dt = ms / steps;
-  var start = bgm.volume;
-  var i = 0;
-  var timer = setInterval(function(){
-    i++;
-    bgm.volume = Math.min(1, Math.max(0, start + (target - start) * (i/steps)));
-    if (i >= steps) clearInterval(timer);
-  }, dt);
+  target = Math.max(0, Math.min(1, target)); ms = ms||400;
+  var steps=24, dt=ms/steps, start=bgm.volume, i=0;
+  var timer=setInterval(function(){ i++; bgm.volume = start + (target-start)*(i/steps); if(i>=steps) clearInterval(timer); }, dt);
+}
+
+// 재생 시도(차단/실패 로그)
+function tryPlay(){
+  return bgm.play().catch(function(e){ console.warn('Play blocked/failed:', e); throw e; });
+}
+
+// Pages 실패 시 Raw로 1회 폴백
+function addFallbackOnce(wasPlaying, keepVol){
+  var triedFallback = false;
+  bgm.onerror = function(){
+    if(!triedFallback){
+      triedFallback = true;
+      console.warn('Pages failed → Fallback RAW:', PLAYLIST[currentIndex].raw);
+      bgm.src = PLAYLIST[currentIndex].raw + '?v=' + Date.now();
+      if(wasPlaying){
+        tryPlay().then(function(){ fadeTo(keepVol,300); updateUiPlaying(true); }).catch(function(){});
+      }
+    }else{
+      console.warn('RAW also failed → skip to next');
+      nextTrack();
+    }
+  };
 }
 
 function setTrack(index, opts){
-  opts = opts || {};
+  opts = opts||{};
   var autoplay = !!opts.autoplay;
-  currentIndex = (index + PLAYLIST.length) % PLAYLIST.length; // 순환
+  currentIndex = (index + PLAYLIST.length) % PLAYLIST.length;
   localStorage.setItem('bgmIndex', String(currentIndex));
 
-  var keepVolume = bgm.volume;
+  var keepVol = bgm.volume;
   var wasPlaying = autoplay || !bgm.paused;
 
-  try { bgm.pause(); } catch(_) {}
-  bgm.src = PLAYLIST[currentIndex].src + '?v=' + Date.now(); // 캐시 회피
+  try{ bgm.pause(); }catch(_){}
+  bgm.src = PLAYLIST[currentIndex].pages + '?v=' + Date.now();
   bgm.currentTime = 0;
-  bgm.volume = keepVolume;
+  bgm.volume = keepVol;
 
-  if ($track) $track.value = String(currentIndex);
+  // 폴백 핸들러(트랙 변경마다 새로 설치)
+  addFallbackOnce(wasPlaying, keepVol);
 
-  if (wasPlaying) {
-    try {
-      bgm.play().then(function(){
-        fadeTo(keepVolume, 300);
-        updateUiPlaying(true);
-      }).catch(function(e){ console.warn(e); });
-    } catch(e) {
-      console.warn(e);
-    }
+  if($track) $track.value = String(currentIndex);
+
+  if(wasPlaying){
+    tryPlay().then(function(){ fadeTo(keepVol,300); updateUiPlaying(true); }).catch(function(){});
   }
 }
 
-function nextTrack(){ setTrack(currentIndex + 1, { autoplay: !bgm.paused }); }
-function prevTrack(){ setTrack(currentIndex - 1, { autoplay: !bgm.paused }); }
+function nextTrack(){ setTrack(currentIndex+1, {autoplay: !bgm.paused}); }
+function prevTrack(){ setTrack(currentIndex-1, {autoplay: !bgm.paused}); }
+bgm.addEventListener('ended', nextTrack);
 
-bgm.addEventListener('ended', nextTrack);  // 한 곡 끝나면 다음 곡 → 끝나면 처음으로
-
-function safeVol(){ return ($vol && $vol.value) ? parseFloat($vol.value) : 0.4; }
+function safeVol(){ return $vol ? parseFloat($vol.value) : 0.4; }
 
 function playBgm(){
-  try{
-    if (bgm.currentTime === 0) { bgm.play().then(function(){ bgm.pause(); }).catch(function(){}) }
-    bgm.play().then(function(){
-      fadeTo(safeVol(), 300);
-      updateUiPlaying(true);
-      localStorage.setItem('bgmOn','1');
-    }).catch(function(e){ console.warn('Autoplay blocked:', e); });
-  }catch(e){
-    console.warn('Autoplay blocked:', e);
-  }
+  bgm.muted = false; // iOS 대비
+  tryPlay().then(function(){
+    fadeTo(safeVol(),300);
+    updateUiPlaying(true);
+    localStorage.setItem('bgmOn','1');
+  }).catch(function(e){ console.warn('Autoplay blocked:', e); });
 }
 function pauseBgm(){
-  fadeTo(0, 250);
-  setTimeout(function(){ bgm.pause(); }, 260);
+  fadeTo(0,250); setTimeout(function(){ bgm.pause(); },260);
   updateUiPlaying(false);
   localStorage.setItem('bgmOn','0');
 }
 
-if ($playBtn) $playBtn.addEventListener('click', playBgm);
-if ($pauseBtn) $pauseBtn.addEventListener('click', pauseBgm);
-if ($vol) $vol.addEventListener('input', function(e){
-  var v = parseFloat(e.target.value);
-  bgm.volume = v;
-  localStorage.setItem('bgmVol', String(v));
+if($playBtn)  $playBtn.addEventListener('click', playBgm);
+if($pauseBtn) $pauseBtn.addEventListener('click', pauseBgm);
+if($vol) $vol.addEventListener('input', function(e){
+  var v = parseFloat(e.target.value); bgm.volume = v; localStorage.setItem('bgmVol', String(v));
 });
-if ($track) $track.addEventListener('change', function(e){
-  var i = parseInt(e.target.value, 10) || 0;
-  setTrack(i, { autoplay: !bgm.paused });
+if($track) $track.addEventListener('change', function(e){
+  setTrack(parseInt(e.target.value||'0',10), {autoplay: !bgm.paused});
 });
 
+// 저장된 ON 상태면 첫 제스처로 재생
 var wasPlaying = false;
 document.addEventListener('visibilitychange', function(){
-  if (document.hidden){
-    wasPlaying = !bgm.paused;
-    if (wasPlaying) pauseBgm();
-  } else {
-    if (wasPlaying) playBgm();
-  }
+  if(document.hidden){ wasPlaying = !bgm.paused; if(wasPlaying) pauseBgm(); }
+  else { if(wasPlaying) playBgm(); }
 });
-
-if (savedOn){
-  var unlock = function(){
-    if (bgm.paused) playBgm();
+if(savedOn){
+  var unlock=function(){
+    if(bgm.paused) playBgm();
     window.removeEventListener('pointerdown', unlock);
     window.removeEventListener('keydown',  unlock);
   };
@@ -642,6 +637,8 @@ if (savedOn){
   window.addEventListener('keydown',  unlock);
   updateUiPlaying(true);
 }
+</script>
+
 
 /* ===== Simple Self Tests (non-intrusive) ===== */
 (function selfTest(){
