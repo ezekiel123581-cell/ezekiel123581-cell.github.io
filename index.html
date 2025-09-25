@@ -486,7 +486,7 @@ Array.prototype.forEach.call(document.querySelectorAll('.cats .cat'), function(b
 
 /* ===== Background Music ===== */
 /* ===== Background Music: Playlist (Repeat-All) ===== */
-var AUDIO_BASE = 'https://ezekiel123581-cell.github.io/audio/'; // <- 네 오디오 폴더 URL로 수정
+var AUDIO_BASE = 'https://ezekiel123581-cell.github.io/';  // <- 네 오디오 폴더 URL로 수정
 
 var FILENAMES = [
   'Untitled (1).mp3',
@@ -500,13 +500,12 @@ var FILENAMES = [
 ];
    
 
-var PLAYLIST = FILENAMES.map(function(name){
-  return {
-    title: name.replace(/\.mp3$/i, ''),
-    src: encodeURI(AUDIO_BASE + name)
-  };
-});
-
+ var PLAYLIST = FILENAMES.map(function(name){
+   return {
+     title: name.replace(/\.mp3$/i, ''),
+     src: AUDIO_BASE + encodeURIComponent(name)  // ✅ 파일명만 인코딩
+   };
+ });
 var idxStored = localStorage.getItem('bgmIndex');
 var idxParsed = parseInt(idxStored != null ? idxStored : '0', 10);
 var currentIndex = Math.min(Math.max(isNaN(idxParsed) ? 0 : idxParsed, 0), PLAYLIST.length - 1);
