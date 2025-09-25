@@ -16,6 +16,7 @@
   --muted:#9fb0c5;
   --accent:#7cc4ff;
   --accent2:#00e0b8;
+  --ring: 0 0 0 3px rgba(34,211,238,.35); /* team-card:focus용 */
 }
 
 /* =========================================================
@@ -103,48 +104,28 @@ body{
 }
 
 /* 카드 (썸네일 레이아웃) */
-/* 🔻 썸네일 */
 .cardlet{
   display:block; text-decoration:none;
   background:#fff; color:#0b1220;
   border:1px solid rgba(0,0,0,.08);
-  border-radius:14px; overflow:hidden; /* 썸네일 라운드 */
+  border-radius:14px; overflow:hidden;
   min-height:150px;
   box-shadow:0 8px 20px rgba(0,0,0,.12);
   transition:transform .15s ease, box-shadow .15s ease;
 }
 .cardlet:hover{ transform:translateY(-2px); box-shadow:0 12px 28px rgba(0,0,0,.16); }
 
-.cardlet__thumb{
-  position:relative;
-  width:100%; aspect-ratio:16/9; /* 일정한 비율로 썸네일 */
-  background:linear-gradient(135deg,#e2e8f0,#cbd5e1);
-  overflow:hidden;
-}
-.cardlet__thumb img{
-  width:100%; height:100%; object-fit:cover; display:block;
-}
+.cardlet__thumb{ position:relative; width:100%; aspect-ratio:16/9; background:linear-gradient(135deg,#e2e8f0,#cbd5e1); overflow:hidden; }
+.cardlet__thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
 
-.cardlet__body{
-  padding:14px 16px;
-}
+.cardlet__body{ padding:14px 16px; }
 .cardlet__title{ margin:0 0 6px; font-size:18px; font-weight:700; }
 .cardlet__desc{ margin:0; color:#475569; font-size:14px; }
 
-/* 썸네일 플레이스홀더(이미지 없을 때) */
 .thumb-fallback{
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
   font-weight:800; font-size:18px; color:#0b1220;
   background:linear-gradient(135deg,#dbeafe,#bcf0da);
-}
-
-/* 안내(빈 상태) */
-.empty{
-  opacity:.7; text-align:center;
-  padding:30px 10px;
-  border:1px dashed #cbd5e1;
-  border-radius:14px;
-  background:rgba(255,255,255,.6);
 }
 
 /* 블록 */
@@ -166,39 +147,32 @@ footer{ margin-top:14px; text-align:center; color:var(--muted); }
 .workspace-only .left{ display:none; }
 
 /* 반응형 */
-@media (max-width:980px){
-  .columns{ grid-template-columns:1fr; }
-}
+@media (max-width:980px){ .columns{ grid-template-columns:1fr; } }
 @media (max-width:640px){
   body{ padding:16px; }
-  .sidebar{
-    position:static; width:auto; height:auto;
-    border-right:none;
-    border:1px solid rgba(255,255,255,.12);
-    border-radius:16px;
-    margin-bottom:12px;
-  }
+  .sidebar{ position:static; width:auto; height:auto; border-right:none; border:1px solid rgba(255,255,255,.12); border-radius:16px; margin-bottom:12px; }
   .canvas{ padding:16px; }
 }
 
 /* 배경음악 컨트롤 */
-.audioctl{
-  margin-top:14px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.audioctl .vol{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  color:#e5e7eb;
-  font-size:12px;
-}
-.audioctl input[type="range"]{
-  width:100%;
-  accent-color: var(--accent);
-}
+.audioctl{ margin-top:14px; display:flex; flex-direction:column; gap:8px; }
+.audioctl .vol{ display:flex; align-items:center; gap:8px; color:#e5e7eb; font-size:12px; }
+.audioctl input[type="range"]{ width:100%; accent-color: var(--accent); }
+
+/* ===== Team Grid (NEW) ===== */
+.container{max-width:1100px;margin:0 auto;padding:0 4px}
+.spacer{height:12px}
+.team-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (min-width:540px){.team-grid{grid-template-columns:repeat(3,1fr)}}
+@media (min-width:880px){.team-grid{grid-template-columns:repeat(5,1fr)}}
+.team-card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px 12px;display:grid;place-items:center;gap:10px;text-align:center;transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;box-shadow:0 1px 0 rgba(0,0,0,.15)}
+.team-card:focus{outline:none;box-shadow:var(--ring)}
+@media (hover:hover){.team-card:hover{transform:translateY(-6px);border-color:rgba(34,211,238,.4);box-shadow:0 10px 24px rgba(0,0,0,.35)}}
+@media (hover:none){.team-card:active{transform:translateY(-4px);border-color:rgba(34,211,238,.35)}}
+.avatar{width:96px;height:96px;border-radius:50%;overflow:hidden;border:2px solid rgba(255,255,255,.12);background:#0f172a}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.team-name{font-weight:800;letter-spacing:.2px}
+.team-gh{font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -248,6 +222,14 @@ footer{ margin-top:14px; text-align:center; color:var(--muted); }
         <p>카테고리를 바꿔도 페이지는 이동하지 않고
            오른쪽 카드 목록만 바뀝니다.</p>
       </section>
+
+      <!-- ▼▼▼ 팀원 소개 섹션 추가 ▼▼▼ -->
+      <div id="about-team" class="container" style="padding-top:0; margin-top:14px">
+        <div class="spacer"></div>
+        <h3 style="margin:0 0 10px">팀원 소개</h3>
+        <div id="teamRoot" class="team-grid"></div>
+      </div>
+      <!-- ▲▲▲ 팀원 소개 섹션 추가 ▲▲▲ -->
     </div>
 
     <div class="right workspace">
@@ -335,65 +317,24 @@ footer{ margin-top:14px; text-align:center; color:var(--muted); }
   }
 
   img.onload = function(){ resize(); requestAnimationFrame(animate); };
-  // ★ 수정: 이중 호출 제거 → resize 만 호출
   window.addEventListener('resize', resize);
 })();
 
 /* ===== Items & Category Filter (with thumbnails) ===== */
-/* 썸네일 경로는 실제 저장 위치로 맞춰주세요. */
 var items = [
-  {
-    title:'GitHub',
-    desc:'소스와 저장소',
-    href:'https://github.com/ezekiel123581-cell',
-    cat:'기타',
-    thumb:'./thumb/img%205.JPG'   // GitHub → img 5
-  },
-  {
-    title:'시각예술시뮬레이터',
-    desc:'시각 실험 데모',
-    href:'./simulator.html',
-    cat:'그림',
-    thumb:'./thumb/img%203.JPG'   // 시각 → img 3
-  },
-  {
-    title:'GPT · 지구 칵테일',
-    desc:'나만의 GPT – 지구 칵테일',
-    href:'https://chatgpt.com/g/g-68b834ee2d4c8191b9ce84960a9aeda8-jigu-kagteil',
-    cat:'기타',
-    thumb:'./thumb/img%202.JPG'   // 지구 칵테일 → img 2
-  },
-  {
-    title:'GPT · 요리 레시피를 알려주는 쥐',
-    desc:'나만의 GPT – 요리 도우미',
-    href:'https://chatgpt.com/g/g-68b81a61f75c8191a19abbbe0d553797-yoriresipireul-alryeojuneun-jwi',
-    cat:'기타',
-    thumb:'./thumb/img%201.JPG'   // 쥐 → img 1
-  },
-  {
-    title:'피아노',
-    desc:'피아노 시뮬레이터',
-    href:'./piano.html',
-    cat:'게임',
-
-    thumb:'./thumb/img%206.JPG'   // 프로토 → img 6
-  },
-  {
-    title:'드로잉 · Grim',
-    desc:'캔버스 드로잉 데모',
-    href:'./Grim.html',
-    cat:'그림',
-    thumb:'./thumb/img%204.JPG'   // 드로잉 → img 4
-  }
+  { title:'GitHub', desc:'소스와 저장소', href:'https://github.com/ezekiel123581-cell', cat:'기타',  thumb:'./thumb/img%205.JPG' },
+  { title:'시각예술시뮬레이터', desc:'시각 실험 데모', href:'./simulator.html', cat:'그림', thumb:'./thumb/img%203.JPG' },
+  { title:'GPT · 지구 칵테일', desc:'나만의 GPT – 지구 칵테일', href:'https://chatgpt.com/g/g-68b834ee2d4c8191b9ce84960a9aeda8-jigu-kagteil', cat:'기타', thumb:'./thumb/img%202.JPG' },
+  { title:'GPT · 요리 레시피를 알려주는 쥐', desc:'나만의 GPT – 요리 도우미', href:'https://chatgpt.com/g/g-68b81a61f75c8191a19abbbe0d553797-yoriresipireul-alryeojuneun-jwi', cat:'기타', thumb:'./thumb/img%201.JPG' },
+  { title:'피아노', desc:'피아노 시뮬레이터', href:'./piano.html', cat:'게임', thumb:'./thumb/img%206.JPG' },
+  { title:'드로잉 · Grim', desc:'캔버스 드로잉 데모', href:'./Grim.html', cat:'그림', thumb:'./thumb/img%204.JPG' }
 ];
-
 
 var grid  = document.getElementById('grid');
 var titleEl = document.getElementById('ws-title');
 
 function makePlaceholder(text){
   text = (text || '').trim().replace(/^GPT\s*·\s*/i,'');
-  // 유니코드 속성 이스케이프(\p{L}) 대신 한글/영문 범위만 안전하게 추출
   var lettersOnly = text.replace(/[^A-Za-z\uAC00-\uD7A3]/g, '');
   var initials = (lettersOnly.slice(0,2) || 'WS').toUpperCase();
   var div = document.createElement('div');
@@ -416,7 +357,6 @@ function render(category){
     var a = document.createElement('a');
     a.className = 'cardlet';
 
-    // 썸네일 영역
     var thumbWrap = document.createElement('div');
     thumbWrap.className = 'cardlet__thumb';
 
@@ -426,7 +366,6 @@ function render(category){
       img.decoding = 'async';
       img.alt = it.title + ' 미리보기';
       img.src = it.thumb;
-      // 이미지 로드 에러 시 플레이스홀더로 대체
       img.addEventListener('error', function(){
         thumbWrap.innerHTML = '';
         thumbWrap.appendChild(makePlaceholder(it.title));
@@ -436,77 +375,50 @@ function render(category){
       thumbWrap.appendChild(makePlaceholder(it.title));
     }
 
-    // 텍스트 영역
     var body = document.createElement('div');
     body.className = 'cardlet__body';
     body.innerHTML = '<h4 class="cardlet__title">' + it.title + '</h4><p class="cardlet__desc">' + it.desc + '</p>';
 
-    // 상태/링크
     if(it.disabled){
-      a.href = 'javascript:void(0)';
-      a.style.opacity = .6;
-      a.style.pointerEvents = 'none';
+      a.href = 'javascript:void(0)'; a.style.opacity = .6; a.style.pointerEvents = 'none';
     } else {
-      a.href = it.href;
-      a.target = '_blank';
-      a.rel = 'noopener';
+      a.href = it.href; a.target = '_blank'; a.rel = 'noopener';
     }
 
-    // 조립
-    a.appendChild(thumbWrap);
-    a.appendChild(body);
-    grid.appendChild(a);
+    a.appendChild(thumbWrap); a.appendChild(body); grid.appendChild(a);
   });
 
   titleEl.textContent = 'workspace · ' + category;
 }
 render('전체');
-// 초기엔 소개 보이도록 유지
 document.body.classList.remove('workspace-only');
 
-// ★ 수정: 카테고리 버튼만 대상으로 범위 한정
-// (음악 버튼은 제외)
 Array.prototype.forEach.call(document.querySelectorAll('.cats .cat'), function(btn){
   btn.addEventListener('click', function(){
     Array.prototype.forEach.call(document.querySelectorAll('.cats .cat'), function(b){ b.classList.remove('active'); });
     btn.classList.add('active');
-
     var cat = btn.getAttribute('data-cat') || '전체';
     render(cat);
-
-    // '전체'는 소개 보이고, 나머지는 워크스페이스만
-    if (cat === '전체') {
-      document.body.classList.remove('workspace-only');
-    } else {
-      document.body.classList.add('workspace-only');
-    }
+    if (cat === '전체') document.body.classList.remove('workspace-only');
+    else document.body.classList.add('workspace-only');
   });
 });
+</script>
 
 <script>
 /* ===== Background Music (Pages + Raw fallback) ===== */
-var AUDIO_BASE = 'https://ezekiel123581-cell.github.io/'; // 루트에 mp3 있을 때
+var AUDIO_BASE = 'https://ezekiel123581-cell.github.io/';
 var RAW_BASE   = 'https://raw.githubusercontent.com/ezekiel123581-cell/ezekiel123581-cell.github.io/main/';
 
 var FILENAMES = [
-  'Untitled (1).mp3',
-  'Untitled.mp3',
-  '君の中にある赤い線と青い線 (1).mp3',
-  '君の中にある赤い線と青い線.mp3',
-  '君の中にある赤い線と青い線 (3).mp3',
-  '君の中にある赤い線と青い線 (2).mp3',
-  'The red line and blue line within you.mp3',
-  'The red line and blue line within you (1).mp3'
+  'Untitled (1).mp3','Untitled.mp3','君の中にある赤い線と青い線 (1).mp3','君の中にある赤い線と青い線.mp3',
+  '君の中にある赤い線と青い線 (3).mp3','君の中にある赤い線と青い線 (2).mp3',
+  'The red line and blue line within you.mp3','The red line and blue line within you (1).mp3'
 ];
 
-// Pages/Raw 둘 다 가진 플레이리스트
 var PLAYLIST = FILENAMES.map(function(name){
   var enc = encodeURIComponent(name);
-  return {
-    title: name.replace(/\.mp3$/i,''),
-    pages: AUDIO_BASE + enc,
-    raw:   RAW_BASE   + enc
-  };
+  return { title: name.replace(/\.mp3$/i,''), pages: AUDIO_BASE + enc, raw: RAW_BASE + enc };
 });
 
 var idxStored    = localStorage.getItem('bgmIndex');
@@ -516,8 +428,7 @@ var savedVol = parseFloat(localStorage.getItem('bgmVol') ?? '0.4');
 var savedOn  = localStorage.getItem('bgmOn') === '1';
 
 var bgm = new Audio(PLAYLIST[currentIndex].pages);
-bgm.loop = false;
-bgm.preload = 'auto';
+bgm.loop = false; bgm.preload = 'auto';
 bgm.volume = isFinite(savedVol) ? savedVol : 0.4;
 
 var $vol      = document.getElementById('music-vol');
@@ -538,19 +449,14 @@ if($track){
 }
 if($vol) $vol.value = String(bgm.volume);
 
-// 부드러운 볼륨 페이드
 function fadeTo(target, ms){
   target = Math.max(0, Math.min(1, target)); ms = ms||400;
   var steps=24, dt=ms/steps, start=bgm.volume, i=0;
   var timer=setInterval(function(){ i++; bgm.volume = start + (target-start)*(i/steps); if(i>=steps) clearInterval(timer); }, dt);
 }
 
-// 재생 시도(차단/실패 로그)
-function tryPlay(){
-  return bgm.play().catch(function(e){ console.warn('Play blocked/failed:', e); throw e; });
-}
+function tryPlay(){ return bgm.play().catch(function(e){ console.warn('Play blocked/failed:', e); throw e; }); }
 
-// Pages 실패 시 Raw로 1회 폴백
 function addFallbackOnce(wasPlaying, keepVol){
   var triedFallback = false;
   bgm.onerror = function(){
@@ -558,38 +464,24 @@ function addFallbackOnce(wasPlaying, keepVol){
       triedFallback = true;
       console.warn('Pages failed → Fallback RAW:', PLAYLIST[currentIndex].raw);
       bgm.src = PLAYLIST[currentIndex].raw + '?v=' + Date.now();
-      if(wasPlaying){
-        tryPlay().then(function(){ fadeTo(keepVol,300); updateUiPlaying(true); }).catch(function(){});
-      }
+      if(wasPlaying){ tryPlay().then(function(){ fadeTo(keepVol,300); updateUiPlaying(true); }).catch(function(){}); }
     }else{
-      console.warn('RAW also failed → skip to next');
-      nextTrack();
+      console.warn('RAW also failed → skip to next'); nextTrack();
     }
   };
 }
 
 function setTrack(index, opts){
-  opts = opts||{};
-  var autoplay = !!opts.autoplay;
+  opts = opts||{}; var autoplay = !!opts.autoplay;
   currentIndex = (index + PLAYLIST.length) % PLAYLIST.length;
   localStorage.setItem('bgmIndex', String(currentIndex));
-
-  var keepVol = bgm.volume;
-  var wasPlaying = autoplay || !bgm.paused;
-
+  var keepVol = bgm.volume; var wasPlaying = autoplay || !bgm.paused;
   try{ bgm.pause(); }catch(_){}
   bgm.src = PLAYLIST[currentIndex].pages + '?v=' + Date.now();
-  bgm.currentTime = 0;
-  bgm.volume = keepVol;
-
-  // 폴백 핸들러(트랙 변경마다 새로 설치)
+  bgm.currentTime = 0; bgm.volume = keepVol;
   addFallbackOnce(wasPlaying, keepVol);
-
   if($track) $track.value = String(currentIndex);
-
-  if(wasPlaying){
-    tryPlay().then(function(){ fadeTo(keepVol,300); updateUiPlaying(true); }).catch(function(){});
-  }
+  if(wasPlaying){ tryPlay().then(function(){ fadeTo(keepVol,300); updateUiPlaying(true); }).catch(function(){}); }
 }
 
 function nextTrack(){ setTrack(currentIndex+1, {autoplay: !bgm.paused}); }
@@ -599,70 +491,52 @@ bgm.addEventListener('ended', nextTrack);
 function safeVol(){ return $vol ? parseFloat($vol.value) : 0.4; }
 
 function playBgm(){
-  bgm.muted = false; // iOS 대비
-  tryPlay().then(function(){
-    fadeTo(safeVol(),300);
-    updateUiPlaying(true);
-    localStorage.setItem('bgmOn','1');
-  }).catch(function(e){ console.warn('Autoplay blocked:', e); });
+  bgm.muted = false;
+  tryPlay().then(function(){ fadeTo(safeVol(),300); updateUiPlaying(true); localStorage.setItem('bgmOn','1'); })
+           .catch(function(e){ console.warn('Autoplay blocked:', e); });
 }
-function pauseBgm(){
-  fadeTo(0,250); setTimeout(function(){ bgm.pause(); },260);
-  updateUiPlaying(false);
-  localStorage.setItem('bgmOn','0');
-}
+function pauseBgm(){ fadeTo(0,250); setTimeout(function(){ bgm.pause(); },260); updateUiPlaying(false); localStorage.setItem('bgmOn','0'); }
 
 if($playBtn)  $playBtn.addEventListener('click', playBgm);
 if($pauseBtn) $pauseBtn.addEventListener('click', pauseBgm);
-if($vol) $vol.addEventListener('input', function(e){
-  var v = parseFloat(e.target.value); bgm.volume = v; localStorage.setItem('bgmVol', String(v));
-});
-if($track) $track.addEventListener('change', function(e){
-  setTrack(parseInt(e.target.value||'0',10), {autoplay: !bgm.paused});
-});
+if($vol) $vol.addEventListener('input', function(e){ var v = parseFloat(e.target.value); bgm.volume = v; localStorage.setItem('bgmVol', String(v)); });
+if($track) $track.addEventListener('change', function(e){ setTrack(parseInt(e.target.value||'0',10), {autoplay: !bgm.paused}); });
 
-// 저장된 ON 상태면 첫 제스처로 재생
 var wasPlaying = false;
 document.addEventListener('visibilitychange', function(){
   if(document.hidden){ wasPlaying = !bgm.paused; if(wasPlaying) pauseBgm(); }
   else { if(wasPlaying) playBgm(); }
 });
 if(savedOn){
-  var unlock=function(){
-    if(bgm.paused) playBgm();
-    window.removeEventListener('pointerdown', unlock);
-    window.removeEventListener('keydown',  unlock);
-  };
+  var unlock=function(){ if(bgm.paused) playBgm(); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown',  unlock); };
   window.addEventListener('pointerdown', unlock);
   window.addEventListener('keydown',  unlock);
   updateUiPlaying(true);
 }
 </script>
 
-
+<script>
 /* ===== Simple Self Tests (non-intrusive) ===== */
 (function selfTest(){
   try{
     console.group('Self-test');
     console.assert(typeof updateUiPlaying === 'function', 'updateUiPlaying exists');
     updateUiPlaying(true);
-    console.assert(($playBtn && $playBtn.disabled) === true && ($pauseBtn && $pauseBtn.disabled) === false, 'Play disabled / Pause enabled when playing');
+    console.assert((document.getElementById('music-play').disabled) === true && (document.getElementById('music-pause').disabled) === false, 'Play disabled / Pause enabled when playing');
     updateUiPlaying(false);
-    console.assert(($playBtn && $playBtn.disabled) === false && ($pauseBtn && $pauseBtn.disabled) === true, 'Play enabled / Pause disabled when paused');
+    console.assert((document.getElementById('music-play').disabled) === false && (document.getElementById('music-pause').disabled) === true, 'Play enabled / Pause disabled when paused');
     console.assert(Array.isArray(PLAYLIST) && PLAYLIST.length > 0, 'Playlist exists');
     console.assert(typeof render === 'function', 'render exists');
+    var $track = document.getElementById('music-track');
     if ($track && $track.options && $track.options.length) {
       var okLen = Array.prototype.every.call($track.options, function(o){ return o.text.length <= 16; });
       console.assert(okLen, 'Option text length <= 16');
     }
-    // Layout test: ensure audio controls don't overflow sidebar
     var sidebarEl = document.querySelector('.sidebar');
     if (sidebarEl){
       var sbr = sidebarEl.getBoundingClientRect();
-      var ids = ['music-play','music-pause','music-vol','music-track'];
-      ids.forEach(function(id){
-        var el = document.getElementById(id);
-        if(!el) return;
+      ['music-play','music-pause','music-vol','music-track'].forEach(function(id){
+        var el = document.getElementById(id); if(!el) return;
         var r = el.getBoundingClientRect();
         console.assert(r.right <= sbr.right + 1, id + ' fits within sidebar width');
       });
@@ -673,12 +547,42 @@ if(savedOn){
       }
     }
     console.log('OK');
-  }catch(e){
-    console.error('Self-test failed', e);
-  }
+  }catch(e){ console.error('Self-test failed', e); }
   console.groupEnd();
 })();
 
+/* ===== Team Grid Mount ===== */
+(function(){
+  'use strict';
+  const TEAM = [
+    { name:'PM.박',   img:'./team/1.png', github:'https://newfacesandnewfacess.github.io/poly-data/' },
+    { name:'PM.임',   img:'./team/2.png', github:'https://a85339559-sys.github.io/ljh6625/' },
+    { name:'PM.김One',img:'./team/3.png', github:'https://ezekiel123581-cell.github.io/' },
+    { name:'PM.김Two',img:'./team/4.png', github:'https://skymoon9577.github.io/first/' },
+    { name:'PM.신',   img:'./team/5.png', github:'https://github.com/your-shin' }
+  ];
+
+  const AVATAR_PLACEHOLDER = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='100%' height='100%' fill='%23111a2e'/><text x='50%' y='50%' fill='%23566' font-size='14' font-family='system-ui' dominant-baseline='middle' text-anchor='middle'>No Image</text></svg>`;
+
+  function escapeHTML(s){
+    return String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  }
+
+  const root = document.getElementById('teamRoot');
+  if(!root) return;
+
+  root.innerHTML = TEAM.map(m => `
+    <a class="team-card" href="${m.github}" target="_blank" rel="noopener" aria-label="${escapeHTML(m.name)}의 GitHub로 이동">
+      <span class="avatar"><img src="${m.img}" alt="${escapeHTML(m.name)} 사진" loading="lazy" decoding="async"></span>
+      <span class="team-name">${escapeHTML(m.name)}</span>
+      <span class="team-gh">GitHub 방문</span>
+    </a>`).join('');
+
+  root.querySelectorAll('.avatar img').forEach(img=>{
+    img.addEventListener('error', ()=>{ img.src = AVATAR_PLACEHOLDER; });
+  });
+})();
 </script>
+
 </body>
 </html>
