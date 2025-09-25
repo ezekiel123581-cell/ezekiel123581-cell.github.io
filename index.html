@@ -17,6 +17,7 @@
       --accent:#7cc4ff;
       --accent2:#00e0b8;
       --ring:0 0 0 3px rgba(34,211,238,.35);
+      --ink:#0b1220; /* 흰 배경 섹션 텍스트 */
     }
 
     /* =========================
@@ -174,10 +175,9 @@
     }
 
     /* =========================
-       4) TEAM GRID (다크 톤 기본)
+       4) TEAM GRID
        ========================= */
     .team-container{max-width:100%;margin:0 auto;padding:0 4px}
-
     .team-grid{
       display:grid;
       gap:12px;
@@ -186,7 +186,6 @@
     @media (max-width:380px){
       .team-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
-
     .team-card{
       background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
       border:1px solid rgba(255,255,255,.08);
@@ -214,48 +213,33 @@
     .team-name{ font-weight:800; letter-spacing:.2px; }
     .team-gh{ font-size:12px; color:var(--muted); }
 
-    /* =========================
-       4-1) TEAM: 흰색 바탕 변형 (섹션 안에서만 덮어쓰기)
-       ========================= */
-    :root{ --ink:#0b1220; } /* [NEW] 흰 배경용 텍스트 색 */
-
-    .section--white{ /* [NEW] */
-      background:#fff;
-      color:var(--ink);
+    /* 흰 바탕 변형 */
+    .section--white{
+      background:#fff; color:var(--ink);
       border:1px solid rgba(2,6,23,.06);
-      border-radius:18px;
-      padding:18px 16px;
+      border-radius:18px; padding:18px 16px;
       box-shadow:0 10px 28px rgba(0,0,0,.12);
     }
     .section--white h3{ color:var(--ink); margin:0 0 10px }
-
-    .section--white .team-grid{ /* [NEW] */
-      gap:14px;
-      grid-template-columns:repeat(auto-fill, minmax(200px,1fr));
-    }
-    .section--white .team-card{ /* [NEW] */
-      background:#fff;
-      color:var(--ink);
+    .section--white .team-grid{ gap:14px; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); }
+    .section--white .team-card{
+      background:#fff; color:var(--ink);
       border:1px solid rgba(2,6,23,.08);
-      border-radius:14px;
-      padding:14px 12px;
+      border-radius:14px; padding:14px 12px;
       display:flex; flex-direction:column; align-items:center; text-align:center;
       box-shadow:0 6px 14px rgba(0,0,0,.08);
       transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
     }
     @media (hover:hover){
-      .section--white .team-card:hover{ /* [NEW] */
+      .section--white .team-card:hover{
         transform:translateY(-4px);
         border-color:rgba(2,6,23,.18);
         box-shadow:0 12px 22px rgba(0,0,0,.12);
       }
     }
-    .section--white .avatar{ /* [NEW] */
-      border-color:rgba(2,6,23,.08);
-      background:#f1f5f9;
-    }
-    .section--white .team-name{ color:var(--ink); font-weight:800; } /* [NEW] */
-    .section--white .team-gh{ color:#64748b; font-size:12px; }      /* [NEW] */
+    .section--white .avatar{ border-color:rgba(2,6,23,.08); background:#f1f5f9; }
+    .section--white .team-name{ color:var(--ink); font-weight:800; }
+    .section--white .team-gh{ color:#64748b; font-size:12px; }
   </style>
 </head>
 <body>
@@ -307,13 +291,11 @@
         </section>
 
         <!-- 팀원 소개 (흰색 바탕 적용) -->
-        <!-- [CHANGED] div → section, class에 section--white 추가 -->
         <section id="about-team" class="team-container section--white" style="padding-top:0; margin-top:14px">
           <div class="team-spacer"></div>
           <h3 style="margin:0 0 10px">팀원 소개</h3>
           <div id="teamRoot" class="team-grid"></div>
         </section>
-        <!-- [CHANGED] 닫는 태그도 </section> -->
       </div>
 
       <div class="right workspace">
@@ -337,9 +319,7 @@
       ctx.imageSmoothingEnabled = true;
 
       var IMG_URL = 'https://ezekiel123581-cell.github.io/bg4.png';
-      var img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.src = IMG_URL;
+      var img = new Image(); img.crossOrigin = 'anonymous'; img.src = IMG_URL;
 
       var vw=0, vh=0, offscreen, octx;
       var amplitude=9, wavelength=200, speed=0.3, tilt=0.25;
@@ -348,12 +328,10 @@
       function resize(){
         vw = canvas.width  = window.innerWidth;
         vh = canvas.height = window.innerHeight;
-
         offscreen = document.createElement('canvas');
         offscreen.width  = vw;
         offscreen.height = vh + 2*PADDING;
         octx = offscreen.getContext('2d');
-
         drawBaseImage();
       }
 
@@ -363,7 +341,6 @@
         var r  = Math.max(vw/iw, vh/ih);
         var dw = iw*r, dh=ih*r;
         var dx = (vw-dw)*.5, dy=(vh-dh)*.5;
-
         octx.clearRect(0,0,offscreen.width,offscreen.height);
         octx.drawImage(img, dx, dy + PADDING, dw, dh);
         octx.drawImage(offscreen, 0, PADDING, vw, 1, 0, 0, vw, PADDING);
@@ -486,134 +463,79 @@
     });
   </script>
 
-  <!-- 3) 배경음악 -->
+  <!-- 3) 배경음악 · 최소 안정 버전 -->
   <script>
-    var AUDIO_BASE = 'https://ezekiel123581-cell.github.io/';
-    var RAW_BASE   = 'https://raw.githubusercontent.com/ezekiel123581-cell/ezekiel123581-cell.github.io/main/';
+    (function(){
+      const BASE = 'https://ezekiel123581-cell.github.io/';
+      const NAMES = [
+        'Untitled (1).mp3',
+        'Untitled.mp3',
+        'The red line and blue line within you (1).mp3',
+        'The red line and blue line within you.mp3',
+        '君の中にある赤い線と青い線 (1).mp3',
+        '君の中にある赤い線と青い線 (2).mp3',
+        '君の中にある赤い線と青い線 (3).mp3',
+        '君の中にある赤い線と青い線.mp3'
+      ];
+      const urlOf = n => BASE + encodeURIComponent(n);
 
-    var FILENAMES = [
-      'Untitled (1).mp3','Untitled.mp3',
-      '君の中にある赤い線と青い線 (1).mp3','君の中にある赤い線と青い線.mp3',
-      '君の中にある赤い線と青い線 (3).mp3','君の中にある赤い線と青い線 (2).mp3',
-      'The red line and blue line within you.mp3','The red line and blue line within you (1).mp3'
-    ];
+      const audio    = new Audio();
+      audio.preload  = 'auto';
+      audio.playsInline = true;
+      audio.crossOrigin = 'anonymous';
 
-    var PLAYLIST = FILENAMES.map(function(name){
-      var enc = encodeURIComponent(name);
-      return { title: name.replace(/\.mp3$/i,''), pages: AUDIO_BASE + enc, raw: RAW_BASE + enc };
-    });
+      const $vol      = document.getElementById('music-vol');
+      const $track    = document.getElementById('music-track');
+      const $playBtn  = document.getElementById('music-play');
+      const $pauseBtn = document.getElementById('music-pause');
 
-    var idxStored    = localStorage.getItem('bgmIndex');
-    var currentIndex = Math.min(Math.max(parseInt(idxStored||'0',10)||0, 0), PLAYLIST.length-1);
+      let i = 0;
 
-    var savedVol = parseFloat(localStorage.getItem('bgmVol') ?? '0.4');
-    var savedOn  = localStorage.getItem('bgmOn') === '1';
-
-    var bgm = new Audio(PLAYLIST[currentIndex].pages);
-    bgm.loop = false;
-    bgm.preload = 'auto';
-    bgm.volume = isFinite(savedVol) ? savedVol : 0.4;
-
-    var $vol      = document.getElementById('music-vol');
-    var $track    = document.getElementById('music-track');
-    var $playBtn  = document.getElementById('music-play');
-    var $pauseBtn = document.getElementById('music-pause');
-
-    function updateUiPlaying(p){ if($playBtn&&$pauseBtn){ $playBtn.disabled=p; $pauseBtn.disabled=!p; } }
-    updateUiPlaying(false);
-
-    if($track){
-      $track.innerHTML = PLAYLIST.map(function(t,i){
-        var base = (t.title||'').split('(')[0].trim();
-        var short = base.length>12 ? base.slice(0,11)+'…' : base;
-        return '<option value="'+i+'">'+((i+1<10?'0':'')+(i+1))+' · '+short+'</option>';
-      }).join('');
-      $track.value = String(currentIndex);
-    }
-    if($vol) $vol.value = String(bgm.volume);
-
-    function fadeTo(target, ms){
-      target = Math.max(0, Math.min(1, target)); ms = ms||400;
-      var steps=24, dt=ms/steps, start=bgm.volume, i=0;
-      var timer=setInterval(function(){ i++; bgm.volume = start + (target-start)*(i/steps); if(i>=steps) clearInterval(timer); }, dt);
-    }
-    function tryPlay(){ return bgm.play().catch(function(e){ console.warn('Play blocked/failed:', e); throw e; }); }
-
-    function addFallbackOnce(wasPlaying, keepVol){
-      var tried=false;
-      bgm.onerror = function(){
-        if(!tried){
-          tried=true;
-          bgm.src = PLAYLIST[currentIndex].raw + '?v=' + Date.now();
-          if(wasPlaying){
-            tryPlay().then(function(){ fadeTo(keepVol,300); updateUiPlaying(true); }).catch(function(){});
-          }
-        }else{
-          nextTrack();
-        }
-      };
-    }
-
-    function setTrack(index, opts){
-      opts = opts||{}; var autoplay = !!opts.autoplay;
-      currentIndex = (index + PLAYLIST.length) % PLAYLIST.length;
-      localStorage.setItem('bgmIndex', String(currentIndex));
-
-      var keepVol = bgm.volume;
-      var wasPlaying = autoplay || !bgm.paused;
-
-      try{ bgm.pause(); }catch(_){}
-      bgm.src = PLAYLIST[currentIndex].pages + '?v=' + Date.now();
-      bgm.currentTime = 0;
-      bgm.volume = keepVol;
-
-      addFallbackOnce(wasPlaying, keepVol);
-
-      if($track) $track.value = String(currentIndex);
-      if(wasPlaying){
-        tryPlay().then(function(){ fadeTo(keepVol,300); updateUiPlaying(true); }).catch(function(){});
+      // 트랙 목록 채우기(긴 제목은 줄임표)
+      if ($track) {
+        $track.innerHTML = NAMES.map((n,idx)=>{
+          const base = n.replace(/\.mp3$/i,'');
+          const short = base.length>12 ? base.slice(0,12)+'…' : base;
+          return `<option value="${idx}">${String(idx+1).padStart(2,'0')} · ${short}</option>`;
+        }).join('');
       }
-    }
 
-    function nextTrack(){ setTrack(currentIndex+1, {autoplay: !bgm.paused}); }
-    function prevTrack(){ setTrack(currentIndex-1, {autoplay: !bgm.paused}); }
-    bgm.addEventListener('ended', nextTrack);
+      function updateUi(isPlaying){
+        if ($playBtn)  $playBtn.disabled  = isPlaying;
+        if ($pauseBtn) $pauseBtn.disabled = !isPlaying;
+      }
 
-    function safeVol(){ return $vol ? parseFloat($vol.value) : 0.4; }
-    function playBgm(){
-      bgm.muted = false;
-      tryPlay().then(function(){ fadeTo(safeVol(),300); updateUiPlaying(true); localStorage.setItem('bgmOn','1'); })
-               .catch(function(e){ console.warn('Autoplay blocked:', e); });
-    }
-    function pauseBgm(){
-      fadeTo(0,250); setTimeout(function(){ bgm.pause(); },260);
-      updateUiPlaying(false);
-      localStorage.setItem('bgmOn','0');
-    }
+      function loadTrack(k, autoplay){
+        i = (k + NAMES.length) % NAMES.length;
+        audio.src = urlOf(NAMES[i]);
+        audio.load();
+        if ($track) $track.value = String(i);
+        if (autoplay) {
+          audio.play().then(()=>updateUi(true)).catch(()=>{});
+        }
+      }
 
-    if($playBtn)  $playBtn.addEventListener('click', playBgm);
-    if($pauseBtn) $pauseBtn.addEventListener('click', pauseBgm);
-    if($vol) $vol.addEventListener('input', function(e){
-      var v = parseFloat(e.target.value); bgm.volume = v; localStorage.setItem('bgmVol', String(v));
-    });
-    if($track) $track.addEventListener('change', function(e){
-      setTrack(parseInt(e.target.value||'0',10), {autoplay: !bgm.paused});
-    });
+      // 컨트롤
+      if ($playBtn)  $playBtn.onclick  = () => audio.play().then(()=>updateUi(true)).catch(()=>{});
+      if ($pauseBtn) $pauseBtn.onclick = () => { audio.pause(); updateUi(false); };
+      if ($track)    $track.onchange   = e => loadTrack(parseInt(e.target.value||'0',10), !audio.paused);
+      if ($vol)      $vol.oninput      = e => { audio.volume = parseFloat(e.target.value); localStorage.setItem('bgmVol', String(audio.volume)); };
 
-    var wasPlaying = false;
-    document.addEventListener('visibilitychange', function(){
-      if(document.hidden){ wasPlaying = !bgm.paused; if(wasPlaying) pauseBgm(); }
-      else { if(wasPlaying) playBgm(); }
-    });
-    if(savedOn){
-      var unlock=function(){ if(bgm.paused) playBgm(); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown',  unlock); };
-      window.addEventListener('pointerdown', unlock);
-      window.addEventListener('keydown',  unlock);
-      updateUiPlaying(true);
-    }
+      // 연속재생
+      audio.addEventListener('ended', () => loadTrack(i+1, true));
+      audio.addEventListener('error', () => console.warn('Audio load error:', audio.src));
+
+      // 초기 볼륨/버튼 상태
+      audio.volume = parseFloat(localStorage.getItem('bgmVol') ?? '0.4');
+      if ($vol) $vol.value = String(audio.volume);
+      updateUi(false);
+
+      // 첫 트랙 로드
+      loadTrack(0, false);
+    })();
   </script>
 
-  <!-- 4) Self-test(옵션) & 팀 그리드 mount -->
+  <!-- 4) 팀 그리드 mount (문법 오류 수정 버전) -->
   <script>
     (function(){
       const TEAM = [
@@ -625,7 +547,7 @@
       ];
 
       const AVATAR_PLACEHOLDER =
-        `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='100%' height='100%' fill='%23111a2e'/><text x='50%' y='50%' fill='%23566' font-size='14' font-family='system-ui' dominant-baseline='middle' text-anchor='middle'>No Image</text></svg>`;
+        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='100%' height='100%' fill='%23111a2e'/><text x='50%' y='50%' fill='%23566' font-size='14' font-family='system-ui' dominant-baseline='middle' text-anchor='middle'>No Image</text></svg>";
 
       function escapeHTML(s){
         return String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
