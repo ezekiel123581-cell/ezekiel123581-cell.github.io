@@ -4,13 +4,16 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>랜덤 노래 맞추기 · YouTube</title>
+
 <style>
-  :root{
-    --bg:#0f172a; --panel:#111827; --card:#111827; --text:#e5e7eb; --muted:#9ca3af; --accent:#60a5fa; --good:#22c55e; --bad:#ef4444;
-  }
+  :root{ --bg:#0f172a; --panel:#111827; --card:#111827; --text:#e5e7eb; --muted:#9ca3af; --accent:#60a5fa; --good:#22c55e; --bad:#ef4444; }
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
-  body{font:15px/1.5 system-ui,Segoe UI,Roboto,Apple SD Gothic Neo,Noto Sans KR,sans-serif;color:var(--text);background:radial-gradient(1200px 600px at 20% -10%,#1e293b 0%,#0f172a 45%,#0b1020 100%) fixed}
+  body{
+    font:15px/1.5 system-ui,Segoe UI,Roboto,Apple SD Gothic Neo,Noto Sans KR,sans-serif;
+    color:var(--text);
+    background:radial-gradient(1200px 600px at 20% -10%,#1e293b 0%,#0f172a 45%,#0b1020 100%) fixed
+  }
   #app{max-width:1100px;margin:24px auto;padding:16px;display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
   @media (max-width: 900px){#app{grid-template-columns:1fr}}
   .card{background:rgba(17,24,39,.82); border:1px solid rgba(255,255,255,.06); backdrop-filter:saturate(140%) blur(6px); border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,.25)}
@@ -29,26 +32,32 @@
   .pill{padding:5px 10px;border:1px solid rgba(255,255,255,.12);border-radius:999px}
   .kpi{display:flex;gap:8px;flex-wrap:wrap}
   .kpi span{background:#0b1220;border:1px solid rgba(255,255,255,.08);padding:8px 10px;border-radius:10px}
-  .hint{color:#fbbf24}
-  .ok{color:var(--good)}
-  .bad-txt{color:var(--bad)}
-  /* 16:9 영상 박스 */
-  .frame{position:relative;border-radius:12px;overflow:hidden;background:#000}
+  .hint{color:#fbbf24} .ok{color:var(--good)} .bad-txt{color:var(--bad)}
+
+  /* 플레이어(작게 기본) + 크기 옵션 */
+  .frame{position:relative;border-radius:12px;overflow:hidden;background:#000;width:min(520px, 100%); margin:0 auto;}
   .frame::before{content:"";display:block;padding-top:56.25%}
+  .frame.small::before{padding-top:36%}
+  .frame.tiny::before{padding-top:20%}
+  .frame.hidden #player{opacity:.02;pointer-events:none;transition:opacity .2s ease}
+  .frame.hidden .dim{background:linear-gradient(180deg,rgba(0,0,0,.75) 0%, rgba(0,0,0,.85) 70%, rgba(0,0,0,.9) 100%)}
   #player{position:absolute;inset:0;width:100%;height:100%}
   .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
   .dim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.0) 0%, rgba(0,0,0,.4) 65%, rgba(0,0,0,.8) 100%)}
   .floating{position:absolute;left:16px;bottom:16px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);padding:10px 12px;border-radius:12px}
+
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media (max-width: 450px){.grid{grid-template-columns:1fr}}
   .mini{font-size:12px;color:var(--muted)}
   .sp{height:8px}
   .tag{display:inline-block;padding:.2rem .6rem;background:#0b1220;border:1px solid rgba(255,255,255,.12);border-radius:999px;margin-right:6px}
+
+  .answerBox, .hintBox{background:#0b1220;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;margin-top:8px;white-space:pre-wrap}
 </style>
 </head>
 <body>
 <div id="app">
-  <!-- 왼쪽: 게임 화면 -->
+  <!-- 좌: 게임 -->
   <section class="card panel col">
     <div class="row" style="justify-content:space-between;align-items:flex-end">
       <div>
@@ -62,7 +71,8 @@
       </div>
     </div>
 
-    <div class="frame">
+    <!-- 플레이어 -->
+    <div class="frame small" id="frame">
       <div id="player"></div>
       <div class="overlay">
         <div class="floating">
@@ -75,11 +85,13 @@
 
     <div class="sp"></div>
 
+    <!-- 정답 입력 -->
     <div class="row">
       <input id="guess" class="input" placeholder="노래 제목 또는 가수 입력 (Enter로 제출)" />
       <button class="btn primary" id="btnCheck">정답 제출</button>
     </div>
 
+    <!-- 컨트롤 -->
     <div class="row">
       <button class="btn" id="btnPlay">10초 재생 ▶</button>
       <button class="btn" id="btnPause">멈춤 ⏸</button>
@@ -89,13 +101,22 @@
       <label class="pill"><input type="checkbox" id="strict"/> 엄격 매칭</label>
     </div>
 
+    <!-- 옵션/디버그 -->
     <div class="grid">
       <div class="col card panel">
         <b>스니펫 옵션</b>
         <label class="row">길이(초): <input id="len" type="range" min="3" max="20" step="1" value="10" style="width:100%"/></label>
         <label class="row">무작위 구간: <input id="rand" type="checkbox" checked /></label>
         <label class="row">소리 켜기: <input id="sound" type="checkbox" checked /></label>
-        <div class="mini muted">재생은 사용자 클릭 후에만 소리 켜짐(모바일 정책)</div>
+        <label class="row">플레이어 크기:
+          <select id="playerSize" class="input" style="max-width:180px">
+            <option value="normal">보통</option>
+            <option value="small" selected>작게</option>
+            <option value="tiny">아주 작게</option>
+            <option value="hidden">숨김(오디오만)</option>
+          </select>
+        </label>
+        <div class="mini muted">보기 난이도는 크기 옵션으로 조절하세요.</div>
       </div>
 
       <div class="col card panel">
@@ -104,42 +125,49 @@
         <div class="mini">채널: <span id="dbgAuthor">-</span></div>
         <div class="mini">ID: <span id="dbgId">-</span></div>
         <div class="mini">길이: <span id="dbgDur">-</span></div>
+        <div class="mini">힌트(요약): <span id="dbgHint">-</span></div>
         <div class="mini">정답 키워드: <span id="dbgKeys">-</span></div>
       </div>
     </div>
   </section>
 
-  <!-- 오른쪽: 곡 목록/플레이리스트 로더 -->
+  <!-- 우: 목록 + 힌트/정답 표시 -->
   <aside class="card panel col">
     <h1>목록 불러오기</h1>
-    <div class="mini muted">아래에 <b>장르/키워드만</b> 줄마다 적으면, <b>음악 카테고리</b> 영상만 찾아 자동으로 목록을 만들고 <b>즉시 랜덤 재생</b>까지 해줍니다.<br>예: <code>k-pop</code>, <code>발라드</code>, <code>뉴진스 hype boy</code></div>
-    <textarea id="listBox" class="input" style="height:200px" placeholder="예) k-pop\n예) 뉴진스 hype boy\n예) 재즈 piano"></textarea>
-    <div class="row">
-  <button class="btn good" id="btnLoadList">목록 적용</button>
-  <button class="btn" id="btnFromKeywords">키워드 → 영상 찾기</button>
-  <label class="pill mini">키당 결과
-    <input id="perKeyword" type="number" min="1" max="3" value="1" style="width:48px;margin-left:6px">
-  </label>
-  <label class="pill mini">
-    <input id="strictSingle" type="checkbox" checked style="margin-right:6px">
-    공식 단일곡 우선
-  </label>
-  <button class="btn bad" id="btnClear">초기화</button>
-</div>
+    <div class="mini muted">
+      줄마다 키워드를 적으면 <b>음악 카테고리</b>에서 자동으로 찾아 목록을 만들고 랜덤 재생해요.
+    </div>
 
-    <details>
-      <summary style="cursor:pointer;margin-top:8px"><b>유튜브 플레이리스트로 자동 불러오기 (선택)</b></summary>
-      <div class="mini muted">YouTube Data API 키가 있다면 플레이리스트의 <b>ID</b>로 자동 채울 수 있어요.</div>
-      <div class="row"><input id="apiKey" class="input" placeholder="YOUR_YOUTUBE_DATA_API_KEY"/></div>
-      <div class="row"><input id="playlistId" class="input" placeholder="플레이리스트 ID (예: PL...)"></div>
-      <div class="row"><button class="btn" id="btnLoadPlaylist">플레이리스트 불러오기</button></div>
-      <div class="mini">가져오는 형식: <code>videoId | 제목,가수,기타 키워드</code> (제목/채널명을 자동으로 키워드에 포함)</div>
-      <div class="mini bad-txt">⚠️ 배포 시 API 키를 코드에 넣지 말고, Google Cloud 콘솔에서 <b>HTTP referrer 제한</b>을 설정하세요.</div>
-    </details>
+    <textarea id="listBox" class="input" style="height:200px" placeholder="예) k-pop\n예) j-pop\n예) 뉴진스 hype boy\n예) 요네즈 켄시 lemon"></textarea>
+
+    <div class="row">
+      <button class="btn good" id="btnLoadList">목록 적용</button>
+      <button class="btn" id="btnFromKeywords">키워드 → 영상 찾기</button>
+      <label class="pill mini">키당 결과
+        <input id="perKeyword" type="number" min="1" max="10" value="3" style="width:56px;margin-left:6px">
+      </label>
+      <label class="pill mini">
+        <input id="strictSingle" type="checkbox" checked style="margin-right:6px">
+        공식 우선
+      </label>
+
+      <label class="pill mini"><input id="preferKRJP" type="checkbox" checked style="margin-right:6px">한/일 곡 선호</label>
+      <label class="pill mini"><input id="strictKRJP" type="checkbox" style="margin-right:6px">한/일만</label>
+
+      <button class="btn bad" id="btnClear">초기화</button>
+    </div>
+
+    <div class="sp"></div>
+
+    <div class="card panel" style="background:#0b1220">
+      <b>힌트 & 정답</b>
+      <div class="hintBox" id="hintBox">여기에 힌트가 표시됩니다.</div>
+      <div class="answerBox" id="answerBox">정답을 보려면 [정답 보기]를 누르세요.</div>
+    </div>
 
     <div class="sp"></div>
     <div class="card panel" style="background:#0b1220">
-      <b>예시 목록(ID 직접 입력도 가능)</b>
+      <b>예시 목록</b>
       <div class="sp"></div>
       <div class="mini">
         dQw4w9WgXcQ | rick astley, never gonna give you up, 릭롤<br/>
@@ -149,100 +177,141 @@
         7wtfhZwyrcc | believer, imagine dragons
       </div>
     </div>
-    <div class="sp"></div>
-    <div class="mini muted">TIP: 영상의 ID는 URL의 <code>v=</code> 뒤 문자열입니다. (예: <code>https://youtube.com/watch?v=<b>dQw4w9WgXcQ</b></code>)
-    </div>
   </aside>
 </div>
 
-<!-- YouTube IFrame Player API -->
 <script>
-  // ===== 전역 상태 =====
-  const DEFAULT_API_KEY = "AIzaSyA_vjR0OI75ezuRW0bVCyr0qBK_om3QcXk"; // ⚠️ 배포용 저장소에 커밋하지 마세요.
-  let player;               // YouTube IFrame Player
-  let videos = [];          // {id, keywords[], title?, author?, dur?}
-  let current = null;       // 현재 곡 객체
-  let currentIdx = -1;      // 현재 인덱스
-  let clip = { start: 0, end: 0, len: 10 }; // 스니펫 구간
-  let score=0, streak=0, miss=0;          // 점수 상태
-  let allowSound=false;     // 사용자 상호작용 이후에만 true
-  let snippetTimer=null;    // setTimeout 핸들
-  let suppressAutoPlayUntil=0; // cue 직후 자동재생 방지용 타임스탬프(ms)
+  const DEFAULT_API_KEY = "AIzaSyA_vjR0OI75ezuRW0bVCyr0qBK_om3QcXk";
+  let player, videos=[], current=null, currentIdx=-1;
+  let clip = { start:0, end:0, len:10 };
+  let score=0, streak=0, miss=0, allowSound=false, snippetTimer=null, suppressAutoPlayUntil=0;
 
-  // ===== 유틸 =====
   const el = (id)=>document.getElementById(id);
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
   const nf = (s)=> new Intl.NumberFormat().format(s);
   const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
   const mmss = (sec)=>{ sec = Math.floor(sec||0); const m=Math.floor(sec/60), s=sec%60; return `${m}:${String(s).padStart(2,'0')}`; };
   const YT_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
-  const normalize = (str)=> (str||"")
-        .toLowerCase()
-        .normalize('NFKD')
-        .replace(/[\p{Diacritic}\p{Emoji_Presentation}\p{Emoji}\p{Extended_Pictographic}]/gu,'')
-        .replace(/\[[^\]]*\]|\([^)]*\)|[^a-z0-9\p{sc=Hangul}\s]/giu,'')
-        .replace(/\s+/g,' ') // 공백 정리
-        .trim();
-// === (추가) 단일곡 선택/랭킹 유틸 ===
-const isoToSec = (iso)=>{
-  if(!iso) return 0;
-  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-  if(!m) return 0;
-  const h=+m[1]||0, mi=+m[2]||0, s=+m[3]||0;
-  return h*3600 + mi*60 + s;
-};
 
-function scoreCandidate(item, q){
-  const norm = s=>normalize(s||'');
-  const titleN = norm(item.title), channelN = norm(item.channel), qN = norm(q);
-  const toSet = s=> new Set(s.split(' ').filter(Boolean));
-  const inter = (A,B)=>{ let c=0; A.forEach(x=>{ if(B.has(x)) c++; }); return c; };
+  const normalize = (str)=> (str||"").toLowerCase().normalize('NFKD')
+    .replace(/[\p{Diacritic}\p{Emoji_Presentation}\p{Emoji}\p{Extended_Pictographic}]/gu,'')
+    .replace(/\[[^\]]*\]|\([^)]*\)|[^a-z0-9\p{sc=Hangul}\s]/giu,'').replace(/\s+/g,' ').trim();
 
-  let sc = 0;
-  // 검색어와 제목/채널 토큰 교집합 가중치
-  sc += inter(toSet(qN), toSet(titleN))*8;
-  sc += inter(toSet(qN), toSet(channelN))*3;
+  // 한/일 감지
+  const hasHangul = (s)=> /[\uAC00-\uD7A3]/.test(s||'');
+  const hasKana   = (s)=> /[\u3040-\u30FF]/.test(s||'');
+  const isKRJP = (it)=> hasHangul(it.title)||hasKana(it.title)||/^ko/i.test(it.lang||'')||/^ja/i.test(it.lang||'');
 
-  const t = (item.title||'').toLowerCase();
-  const c = (item.channel||'').toLowerCase();
+  const isoToSec = (iso)=>{ if(!iso) return 0; const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/); if(!m) return 0; return (+m[1]||0)*3600+(+m[2]||0)*60+(+m[3]||0); };
 
-  // 공식 신호 가점
-  if(/official (music )?video|official video|official audio|\bm\/v\b|\bmv\b/.test(t)) sc += 25;
-  if(/vevo|official/.test(c)) sc += 20;
-  if(/\- topic$/i.test(item.channel||'')) sc += 18; // Artist - Topic
-
-  // 비공식/변형 감점
-  if(/lyrics?|가사/.test(t)) sc -= 20;
-  if(/live|직캠|fancam|fan ?cam|performance|concert|stage/.test(t)) sc -= 35;
-  if(/cover|커버|remix|mashup|sped ?up|slowed/.test(t)) sc -= 35;
-  if(/dance practice|안무/.test(t)) sc -= 25;
-  if(/shorts?/.test(t)) sc -= 30;
-
-  // 길이(1~10분 선호)
-  const d = item.durationSec||0;
-  if(d<60 || d>600) sc -= 40;
-  else if(d<120 || d>420) sc -= 10;
-
-  return sc;
-}
-
-function rankMusicCandidates(items, query, {strict=false}={}){
-  const withScore = items.map(it=>({...it, score: scoreCandidate(it, query)}));
-  let ranked = withScore.sort((a,b)=> b.score - a.score);
-  if(strict){
-    const isOfficialish = (it)=>{
-      const t=(it.title||'').toLowerCase();
-      const c=(it.channel||'').toLowerCase();
-      return /official|vevo/.test(c) ||
-             /official (music )?video|official audio|\bm\/v\b|\bmv\b/.test(t) ||
-             /\- topic$/i.test(it.channel||'');
-    };
-    const strictRanked = ranked.filter(isOfficialish);
-    if(strictRanked.length>0) ranked = strictRanked; // 없으면 일반 랭킹으로 폴백
+  // 검색
+  async function searchVideoIds(apiKey, query, maxResults, {region='KR', lang='ko'}={}){
+    const url = new URL('https://www.googleapis.com/youtube/v3/search');
+    url.searchParams.set('key', apiKey);
+    url.searchParams.set('part', 'snippet');
+    url.searchParams.set('type', 'video');
+    url.searchParams.set('videoEmbeddable','true');
+    url.searchParams.set('videoSyndicated','true');
+    url.searchParams.set('videoCategoryId','10');
+    url.searchParams.set('order','relevance');
+    url.searchParams.set('maxResults', String(maxResults));
+    url.searchParams.set('q', query);
+    url.searchParams.set('regionCode', region);
+    url.searchParams.set('relevanceLanguage', lang);
+    const res = await fetch(url.toString());
+    if(!res.ok) throw new Error(`검색 API 오류 ${res.status}`);
+    const data = await res.json();
+    return (data.items||[]).map(it=>it.id?.videoId).filter(Boolean);
   }
-  return ranked;
-}
 
+  // 메타 수집
+  async function fetchMusicSnippets(apiKey, ids){
+    const chunks=[]; for(let i=0;i<ids.length;i+=50){ chunks.push(ids.slice(i,i+50)); }
+    const results=[]; const region = 'KR';
+    for(const c of chunks){
+      const url = new URL('https://www.googleapis.com/youtube/v3/videos');
+      url.searchParams.set('key', apiKey);
+      url.searchParams.set('part','snippet,status,contentDetails');
+      url.searchParams.set('id', c.join(','));
+      const res = await fetch(url.toString());
+      if(!res.ok) throw new Error(`videos.list 오류 ${res.status}`);
+      const data = await res.json();
+      for(const it of (data.items||[])){
+        const cat = it.snippet?.categoryId;
+        const emb = it.status?.embeddable;
+        const rr = it.contentDetails?.regionRestriction || {};
+        const blocked = Array.isArray(rr.blocked) ? rr.blocked : [];
+        const allowed = Array.isArray(rr.allowed) ? rr.allowed : null;
+        const age = it.contentDetails?.contentRating?.ytRating === 'ytAgeRestricted';
+        const regionBlocked = blocked.includes(region) || (Array.isArray(allowed) && !allowed.includes(region));
+        if(cat==='10' && emb && !regionBlocked && !age){
+          results.push({
+            id: it.id,
+            title: it.snippet?.title||'',
+            channel: it.snippet?.channelTitle||'',
+            durationSec: isoToSec(it.contentDetails?.duration||''),
+            lang: it.snippet?.defaultAudioLanguage || it.snippet?.defaultLanguage || ''
+          });
+        }
+      }
+      await sleep(60);
+    }
+    return results;
+  }
+
+  // 랭킹(가중치 기반) — 공식 우선(여러 개 허용)
+  function scoreCandidate(item, q, {preferKRJP=false, officialPref=false}={}){
+    const norm = s=>normalize(s||'');
+    const titleN = norm(item.title), channelN = norm(item.channel), qN = norm(q);
+    const toSet = s=> new Set(s.split(' ').filter(Boolean));
+    const inter = (A,B)=>{ let c=0; A.forEach(x=>{ if(B.has(x)) c++; }); return c; };
+
+    let sc = 0;
+    sc += inter(toSet(qN), toSet(titleN))*8;
+    sc += inter(toSet(qN), toSet(channelN))*3;
+
+    const t = (item.title||'').toLowerCase();
+    const c = (item.channel||'').toLowerCase();
+
+    const officialish = /official (music )?video|official video|official audio|\bm\/v\b|\bmv\b/.test(t) ||
+                        /vevo|official/.test(c) ||
+                        /\- topic$/i.test(item.channel||'');
+
+    // 기본 가중치
+    if(/official (music )?video|official video|official audio|\bm\/v\b|\bmv\b/.test(t)) sc += 25;
+    if(/vevo|official/.test(c)) sc += 20;
+    if(/\- topic$/i.test(item.channel||'') ) sc += 18;
+
+    // "공식 우선"을 체크하면 추가 보너스만 부여(필터 X)
+    if(officialPref){
+      if(officialish) sc += 35;
+      else sc -= 5;
+    }
+
+    // 비공식/변형 감점
+    if(/lyrics?|가사/.test(t)) sc -= 20;
+    if(/live|직캠|fancam|fan ?cam|performance|concert|stage/.test(t)) sc -= 35;
+    if(/cover|커버|remix|mashup|sped ?up|slowed/.test(t)) sc -= 35;
+    if(/dance practice|안무/.test(t)) sc -= 25;
+    if(/shorts?/.test(t)) sc -= 30;
+
+    // 길이 선호
+    const d = item.durationSec||0;
+    if(d<60 || d>600) sc -= 40; else if(d<120 || d>420) sc -= 10;
+
+    // 한/일 선호
+    if(preferKRJP){
+      if(isKRJP(item)) sc += 40; else sc -= 18;
+    }
+    return sc;
+  }
+
+  function rankMusicCandidates(items, query, {preferKRJP=false, strictKRJP=false, officialPref=false}={}){
+    let pool = items.slice();
+    if(strictKRJP) pool = pool.filter(isKRJP); // 이것만 ‘필터’(요청 시 한/일만)
+    const withScore = pool.map(it=>({...it, score: scoreCandidate(it, query, {preferKRJP, officialPref})}));
+    return withScore.sort((a,b)=> b.score - a.score);
+  }
 
   function setStatus(msg){ el('status').textContent = msg; }
   function updateKPI(){ el('score').textContent=nf(score); el('streak').textContent=nf(streak); el('miss').textContent=nf(miss); }
@@ -253,65 +322,39 @@ function rankMusicCandidates(items, query, {strict=false}={}){
     el('dbgDur').textContent = info.dur? mmss(info.dur):'-';
     el('dbgKeys').innerHTML = (info.keywords||[]).map(k=>`<span class="tag">${k}</span>`).join('');
   }
+  function setHintPanel(text){ el('dbgHint').textContent = text || '-'; }
   function setClipWindow(){ el('clipWindow').textContent = `${mmss(clip.start)} ~ ${mmss(clip.end)} (${Math.round(clip.len)}s)`; }
 
-  // ===== IFrame API 로더 =====
+  // IFrame API
   let ytApiReady = false;
-  function injectYT(){
-    if(ytApiReady) return; ytApiReady = true;
-    const tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    document.body.appendChild(tag);
-  }
+  function injectYT(){ if(ytApiReady) return; ytApiReady = true; const tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api"; document.body.appendChild(tag); }
   injectYT();
   window.onYouTubeIframeAPIReady = ()=>{
     const vars = {playsinline:1, controls:1, modestbranding:1, rel:0, iv_load_policy:3, disablekb:0, autoplay:0};
     try{ if(location.origin && /^https?:/i.test(location.origin)) vars.origin = location.origin; }catch{}
-    player = new YT.Player('player',{
-      videoId: 'M7lc1UVf-VE', // 데모
-      playerVars: vars,
-      events:{
-        'onReady': onPlayerReady,
-        'onStateChange': onPlayerState,
-        'onError': onPlayerError
-      }
-    });
+    player = new YT.Player('player',{videoId:'M7lc1UVf-VE',playerVars:vars,events:{onReady:onPlayerReady,onStateChange:onPlayerState,onError:onPlayerError}});
   };
-
-  function onPlayerReady(){ setStatus('장르/키워드를 입력하고 [목록 적용]을 누르세요'); }
+  function onPlayerReady(){ setStatus('키워드를 입력하고 [목록 적용]을 누르세요'); }
   function onPlayerError(e){
-    console.warn('Player error', e.data, current);
-    setStatus('이 영상은 임베드가 제한되어 건너뜁니다. 다음 곡으로 넘어갑니다');
-    // 현재 곡을 목록에서 제거하여 반복 오류 방지
-    if(currentIdx>=0 && videos[currentIdx]?.id === current?.id){
-      try{ videos.splice(currentIdx,1); }catch{}
-      currentIdx = -1; current = null;
-    }
-    if(videos.length>0) nextRandom();
-    else setStatus('사용 가능한 영상이 없습니다. 키워드로 다시 검색하거나 목록을 수정하세요');
+    setStatus('임베드 불가 영상은 건너뜁니다');
+    if(currentIdx>=0 && videos[currentIdx]?.id === current?.id){ try{ videos.splice(currentIdx,1);}catch{} currentIdx=-1; current=null; }
+    if(videos.length>0) nextRandom(); else setStatus('사용 가능한 영상이 없습니다');
   }
   function onPlayerState(e){
     try{
-      const state = e.data;
-      // 플레이 상태 코드: -1(unstarted), 0(ended), 1(playing), 2(paused), 3(buffering), 5(cued)
-      if(state === YT.PlayerState.PLAYING){
-        if(Date.now() < suppressAutoPlayUntil){
-          // cue 직후 예기치 않은 자동재생 → 즉시 일시정지
-          player.pauseVideo();
-          setStatus('준비 완료. [10초 재생 ▶]을 눌러 들으세요');
-        }
+      if(e.data === YT.PlayerState.PLAYING && Date.now() < suppressAutoPlayUntil){
+        player.pauseVideo(); setStatus('준비 완료. [10초 재생 ▶]');
       }
     }catch{}
   }
 
-  // ===== 목록 파서 =====
+  // 목록 파서
   function parseList(text){
     const lines = (text||'').split(/\n+/).map(s=>s.trim()).filter(Boolean);
     const out=[]; for(const line of lines){
       const [idPartRaw, keyPart] = line.split('|').map(s=>s?.trim()||'');
       if(!idPartRaw) continue;
       let id = idPartRaw;
-      // URL 에서 추출
       if(!YT_ID_RE.test(id)){
         const m = idPartRaw.match(/[?&]v=([^&\s]+)/) || idPartRaw.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
         if(m) id = m[1];
@@ -322,157 +365,86 @@ function rankMusicCandidates(items, query, {strict=false}={}){
     }
     return out;
   }
-
-  // 키워드라인만 추출
   function extractKeywordLines(text){
     const lines = (text||'').split(/\n+/).map(s=>s.trim()).filter(Boolean);
     return lines.filter(line=>{
       const first = line.split('|')[0].trim();
       if(YT_ID_RE.test(first)) return false;
       if(/[?&]v=/.test(first) || /youtu\.be\//.test(first)) return false;
-      return true; // ID 가 아닌 라인 → 키워드로 간주
+      return true;
     });
   }
 
-  // ===== YouTube 검색: 음악 카테고리 전용 =====
-  async function searchVideoIds(apiKey, query, maxResults){
-    const base = 'https://www.googleapis.com/youtube/v3/search';
-    const url = new URL(base);
-    url.searchParams.set('key', apiKey);
-    url.searchParams.set('part', 'snippet');
-    url.searchParams.set('type', 'video');
-    url.searchParams.set('videoEmbeddable','true');
-    url.searchParams.set('videoSyndicated','true');
-    url.searchParams.set('videoCategoryId','10'); // Music category
-    url.searchParams.set('order','relevance');
-    url.searchParams.set('maxResults', String(maxResults));
-    url.searchParams.set('q', query);
-    url.searchParams.set('regionCode', 'KR');
-    url.searchParams.set('relevanceLanguage', 'ko');
-    const res = await fetch(url.toString());
-    if(!res.ok) throw new Error(`검색 API 오류 ${res.status}`);
-    const data = await res.json();
-    return (data.items||[]).map(it=>it.id?.videoId).filter(Boolean);
-  }
-
-async function fetchMusicSnippets(apiKey, ids){
-  const chunks=[]; for(let i=0;i<ids.length;i+=50){ chunks.push(ids.slice(i,i+50)); }
-  const results=[];
-  const region = 'KR'; // 지역 제한 필터 기준
-  for(const c of chunks){
-    const url = new URL('https://www.googleapis.com/youtube/v3/videos');
-    url.searchParams.set('key', apiKey);
-    url.searchParams.set('part','snippet,status,contentDetails');
-    url.searchParams.set('id', c.join(','));
-    const res = await fetch(url.toString());
-    if(!res.ok) throw new Error(`videos.list 오류 ${res.status}`);
-    const data = await res.json();
-    for(const it of (data.items||[])){
-      const cat = it.snippet?.categoryId;
-      const emb = it.status?.embeddable;
-      const rr = it.contentDetails?.regionRestriction || {};
-      const blocked = Array.isArray(rr.blocked) ? rr.blocked : [];
-      const allowed = Array.isArray(rr.allowed) ? rr.allowed : null; // null: 제한 정보 없음
-      const age = it.contentDetails?.contentRating?.ytRating === 'ytAgeRestricted';
-      const regionBlocked = blocked.includes(region) || (Array.isArray(allowed) && !allowed.includes(region));
-      if(cat==='10' && emb && !regionBlocked && !age){ // 10 = Music
-        results.push({
-          id: it.id,
-          title: it.snippet?.title||'',
-          channel: it.snippet?.channelTitle||'',
-          durationSec: isoToSec(it.contentDetails?.duration||'')
-        });
-      }
-    }
-    await sleep(60);
-  }
-  return results;
-}
-// 현재 곡의 제목/채널이 비어있으면 YouTube Data API로 한 번 보강
-async function hydrateCurrentMeta(){
-  if(!current?.id) return current;
-  const need =
-    !current.title || current.title === '(제목)' || current.title.length < 2 ||
-    !current.author || current.author === '(채널)';
-  if(!need) return current;
-
-  const apiKey = (el('apiKey')?.value?.trim()) || DEFAULT_API_KEY;
-  if(!apiKey) return current; // API 키 없으면 스킵
-
-  try{
-    const url = new URL('https://www.googleapis.com/youtube/v3/videos');
-    url.searchParams.set('key', apiKey);
-    url.searchParams.set('part', 'snippet');
-    url.searchParams.set('id', current.id);
-    const res = await fetch(url.toString());
-    if(res.ok){
-      const data = await res.json();
-      const it = (data.items||[])[0];
-      if(it){
-        current.title  = it.snippet?.title        || current.title;
-        current.author = it.snippet?.channelTitle || current.author;
-      }
-    }
-  }catch(e){ /* 네트워크/쿼터 이슈는 조용히 무시 */ }
-  return current;
-}
-
-
-
-  // 수동 입력(영상 ID 직접 입력) 시 임베드 불가/음악 아님 영상 제거용
-  async function filterEmbeddableMusic(arr){
+  // 수동 ID 필터(임베드/음악/한일)
+  async function filterEmbeddableMusic(arr, {strictKRJP=false}={}){
     if(!arr || arr.length===0) return arr;
-    const apiKey = (el('apiKey')?.value?.trim()) || DEFAULT_API_KEY;
-    if(!apiKey) return arr; // 키가 없는 경우 필터링 생략
+    const apiKey = DEFAULT_API_KEY;
     try{
       const ids = arr.map(o=>o.id);
-      const ok = await fetchMusicSnippets(apiKey, ids); // 음악+임베드 가능한 것만 반환
-      const okSet = new Set(ok.map(it=>it.id));
-      return arr.filter(o=>okSet.has(o.id));
+      const okItems = await fetchMusicSnippets(apiKey, ids);
+      const okSet = new Set(okItems.map(it=>it.id));
+      let filtered = arr.filter(o=>okSet.has(o.id));
+      if(strictKRJP){
+        const okKRJP = new Set(okItems.filter(isKRJP).map(it=>it.id));
+        filtered = filtered.filter(o=> okKRJP.has(o.id));
+      }
+      return filtered;
     }catch(err){ console.warn('filterEmbeddableMusic 실패', err); return arr; }
   }
 
-async function buildListFromKeywords(kws, per){
-  const apiKey = (el('apiKey')?.value?.trim()) || DEFAULT_API_KEY;
-  if(!apiKey){ alert('API 키가 필요합니다'); return []; }
+  // 키워드 → 영상 행 만들기
+  async function buildListFromKeywords(kws, per){
+    const apiKey = DEFAULT_API_KEY;
+    const rows=[]; const seen=new Set();
+    const officialPref = !!el('strictSingle')?.checked;
+    const preferKRJP = !!el('preferKRJP')?.checked;
+    const strictKRJP = !!el('strictKRJP')?.checked;
 
-  const rows=[]; const seen=new Set();
-  const strict = !!el('strictSingle')?.checked;
+    for(const qRaw of kws){
+      const q = qRaw.trim();
+      try{
+        const fetchCount = Math.min(50, Math.max(10, per*8));
+        const searchQ = officialPref ? `${q} official` : q;
 
-  for(const qRaw of kws){
-    const q = qRaw.trim();
-    try{
-      const fetchCount = Math.min(15, per*5); // 여유로 가져와 정밀 필터
-      const searchQ = strict ? `${q} official` : q; // 공식 신호 강화
-      const ids = await searchVideoIds(apiKey, searchQ, fetchCount);
-      const musicItems = await fetchMusicSnippets(apiKey, ids);
-      const ranked = rankMusicCandidates(musicItems, q, {strict});
-      const take = strict ? 1 : Math.min(per, ranked.length);
-      const chosen = ranked.slice(0, take);
+        // 한/일 선호 시 KR/JP 병렬 검색
+        let ids = [];
+        if(preferKRJP){
+          const [idsKR, idsJP] = await Promise.all([
+            searchVideoIds(apiKey, searchQ, fetchCount, {region:'KR', lang:'ko'}),
+            searchVideoIds(apiKey, searchQ, fetchCount, {region:'JP', lang:'ja'})
+          ]);
+          ids = Array.from(new Set([...idsKR, ...idsJP]));
+        } else {
+          ids = await searchVideoIds(apiKey, searchQ, fetchCount, {region:'KR', lang:'ko'});
+        }
 
-      for(const it of chosen){
-        if(seen.has(it.id)) continue; // 중복 제거
-        seen.add(it.id);
-        const keys = normalize(`${q},${it.title},${it.channel}`);
-        rows.push(`${it.id} | ${keys}`);
-      }
-      await sleep(120); // 레이트 리밋 보호
-    }catch(err){ console.error(err); alert(`"${q}" 처리 실패: ${err.message}`); }
+        const musicItems = await fetchMusicSnippets(apiKey, ids);
+        const ranked = rankMusicCandidates(musicItems, q, {preferKRJP, strictKRJP, officialPref});
+
+        const take = Math.min(per, ranked.length);
+        const chosen = ranked.slice(0, take);
+
+        for(const it of chosen){
+          if(seen.has(it.id)) continue;
+          seen.add(it.id);
+          const keys = normalize(`${q},${it.title},${it.channel}`);
+          rows.push(`${it.id} | ${keys}`);
+        }
+        await sleep(120);
+      }catch(err){ console.error(err); alert(`"${q}" 처리 실패: ${err.message}`); }
+    }
+    return rows;
   }
-  return rows;
-}
-
 
   async function convertKeywordsToVideoRows(autoApply=false){
     const text = el('listBox').value;
     const kws = extractKeywordLines(text);
     if(kws.length===0){ alert('키워드로 간주되는 줄이 없습니다.'); return; }
-    const per = clamp(Number(el('perKeyword')?.value)||1, 1, 3);
+    const per = clamp(Number(el('perKeyword')?.value)||1, 1, 10);
 
-    setStatus('키워드 검색(음악만) 중...');
+    setStatus(`키워드 검색(음악·KO/JA 선호) 중... 키당 ${per}개`);
     const rows = await buildListFromKeywords(kws, per);
     if(rows.length===0){ setStatus('검색 결과가 없습니다'); return; }
-    // 기존 텍스트에서 키워드 라인을 제거하고, 결과를 추가
     const nonKeywordLines = (text||'').split(/\n+/).filter(Boolean).filter(line=>!kws.includes(line.trim()));
     el('listBox').value = [...nonKeywordLines, ...rows].join('\n');
     setStatus(`${rows.length}개 음악 영상을 찾았습니다${autoApply? ' · 적용 중...':''}`);
@@ -484,243 +456,162 @@ async function buildListFromKeywords(kws, per){
     }
   }
 
-  // ===== 목록 적용: 키워드만 있으면 자동 변환 + 즉시 랜덤재생 =====
+  // 목록 적용
   async function applyList(){
     const text = el('listBox').value.trim();
-    // 1) VIDEO_ID 가 있는 경우 그대로 파싱
+    const strictKRJP = !!el('strictKRJP')?.checked;
+
     let arr = parseList(text);
     if(arr.length>0){
-      // 임베드 불가/음악 아님 영상 제거(가능 시)
       const before = arr.length;
-      const filtered = await filterEmbeddableMusic(arr);
+      const filtered = await filterEmbeddableMusic(arr, {strictKRJP});
       const removed = before - filtered.length;
       videos = filtered; currentIdx=-1; score=streak=miss=0; updateKPI();
-      // 텍스트 영역에도 반영
       el('listBox').value = filtered.map(o=>`${o.id} | ${(o.keywords||[]).join(',')}`).join('\n');
-      setStatus(`${videos.length}곡 로드 완료${removed>0? ` · 임베드 불가 ${removed}곡 제외`:''}. [다음 랜덤]을 누르세요`);
+      setStatus(`${videos.length}곡 로드 완료${removed>0? ` · 제외 ${removed}곡`:''}. [다음 랜덤]`);
       return;
     }
 
-    // 2) 키워드만 있는 경우 → 음악 카테고리로 검색 후 즉시 재생
     const kws = extractKeywordLines(text);
     if(kws.length===0){ alert('키워드를 한 줄 이상 입력하세요'); return; }
-    const per = clamp(Number(el('perKeyword')?.value)||1, 1, 3);
+    const per = clamp(Number(el('perKeyword')?.value)||1, 1, 10);
     const rows = await buildListFromKeywords(kws, per);
     if(rows.length===0){ setStatus('검색 결과가 없습니다'); return; }
     el('listBox').value = rows.join('\n');
     videos = parseList(el('listBox').value);
     currentIdx=-1; score=streak=miss=0; updateKPI();
-    setStatus(`${videos.length}곡(음악 카테고리) 로드 완료. 즉시 랜덤 재생 시작`);
+    setStatus(`${videos.length}곡 로드 완료. 즉시 랜덤 재생`);
     nextRandom();
   }
 
-  // ===== 곡 선택/준비 =====
+  // 곡 선택/준비
   async function nextRandom(){
     if(videos.length===0){ setStatus('먼저 목록을 적용하세요'); return; }
-    // 중복 방지: 연속 같은 인덱스만 피함
+    setHintPanel('-'); el('hintBox').textContent='여기에 힌트가 표시됩니다.'; el('answerBox').textContent='정답을 보려면 [정답 보기]를 누르세요.';
+
     let idx; do{ idx = Math.floor(Math.random()*videos.length); } while(videos.length>1 && idx===currentIdx);
     currentIdx = idx; current = {...videos[idx]};
 
-    // 우선 cue 로 제목/길이 파악 후 랜덤 구간 결정
-    // cue 직후 자동 재생되는 케이스 방지: 2초간 플레이 감지 시 멈춤
     suppressAutoPlayUntil = Date.now() + 2000;
     player.cueVideoById(current.id);
     setStatus('곡 불러오는 중...');
 
-    // getDuration 은 onReady 이후 메타데이터 로드가 필요하여 약간의 대기
-    for(let i=0;i<40;i++){ // 최대 ~2초 대기
-      const dur = player.getDuration?.();
-      if(dur && dur>0){ current.dur = dur; break; }
-      await sleep(50);
-    }
-    const dur = current.dur || 180; // 기본 3분 가정
+    for(let i=0;i<40;i++){ const dur = player.getDuration?.(); if(dur && dur>0){ current.dur = dur; break; } await sleep(50); }
+    const dur = current.dur || 180;
 
     clip.len = Number(el('len').value) || 10;
-    const margin = 2; // 끝 안전 마진
-    const maxStart = Math.max(0, Math.floor(dur - clip.len - margin));
+    const margin = 2, maxStart = Math.max(0, Math.floor(dur - clip.len - margin));
     const randomize = el('rand').checked;
     clip.start = randomize ? Math.floor(Math.random()* (maxStart+1)) : 0;
     clip.end = clamp(clip.start + clip.len, 0, Math.floor(dur - margin));
     setClipWindow();
 
-    // 실제 시작 구간으로 cue
     player.cueVideoById({videoId: current.id, startSeconds: clip.start});
-    // cue 직후 자동 재생되는 케이스 방지: 2초간 플레이 감지 시 멈춤
     suppressAutoPlayUntil = Date.now() + 2000;
 
-    // 디버그용 메타데이터
-    const vd = player.getVideoData?.() || {}; // {title, author, video_id}
-    current.title = vd.title || '(제목)';
-    current.author = vd.author || '(채널)';
+    const vd = player.getVideoData?.() || {};
+    current.title = vd.title || '(제목)'; current.author = vd.author || '(채널)';
+
     setDebug({id: current.id, title: current.title, author: current.author, dur: dur, keywords: current.keywords});
-    setStatus('준비 완료. [10초 재생 ▶]을 눌러 들으세요');
+    setStatus('준비 완료. [10초 재생 ▶]');
     el('guess').value = '';
   }
 
-  // ===== 재생/정지 =====
+  // 재생
   function playSnippet(){
     if(!player) return; clearTimeout(snippetTimer);
-    // 모바일 정책: 사용자 제스처 후에만 소리 허용
     allowSound = allowSound || el('sound').checked;
-    // 사용자 의도 재생이므로 억제 타이머 해제
     suppressAutoPlayUntil = 0;
-    try{
-      if(allowSound && el('sound').checked){ player.unMute?.(); player.setVolume?.(100); }
-      else { player.mute?.(); }
-    }catch{ /* ignore */ }
+    try{ if(allowSound && el('sound').checked){ player.unMute?.(); player.setVolume?.(100); } else { player.mute?.(); } }catch{}
     try{ player.seekTo(clip.start, true); }catch{}
-    player.playVideo();
-    setStatus('재생 중...');
+    player.playVideo(); setStatus('재생 중...');
     snippetTimer = setTimeout(()=>{ player.pauseVideo(); setStatus('멈춤. 정답을 입력하거나 [다음 랜덤]'); }, Math.max(500, clip.len*1000));
   }
 
-  // ===== 매칭 로직 =====
+  // 매칭
   function isCorrect(input, {title, author, keywords}){
-    const q = normalize(input);
-    if(!q) return false;
-    const t = normalize(title);
-    const a = normalize(author);
+    const q = normalize(input); if(!q) return false;
+    const t = normalize(title), a = normalize(author);
     const ks = (keywords||[]).map(normalize).filter(Boolean);
-
-    // 느슨한 모드: 포함 관계면 통과
     if(!el('strict').checked){
       if(t.includes(q) || q.includes(t)) return true;
       if(a.includes(q) || q.includes(a)) return true;
       for(const k of ks){ if(k && (k.includes(q) || q.includes(k))) return true; }
-      // 토큰 교집합
       const set = (s)=> new Set((s||'').split(' ').filter(Boolean));
       const inter = (A,B)=>{ let c=0; A.forEach(x=>{ if(B.has(x)) c++; }); return c; };
       const scoreTok = inter(set(q), set(t)) + inter(set(q), set(a)) + ks.reduce((acc,k)=> acc + inter(set(q), set(k)), 0);
-      if(scoreTok >= 2) return true;
-      return false;
+      return scoreTok >= 2;
     }
-
-    // 엄격 모드: 키워드/제목 중 하나에 100% 포함
     if(t.includes(q) || a.includes(q)) return true;
     return ks.some(k=>k && (k===q || k.includes(q) || q.includes(k)));
   }
 
- function checkAnswer(){
-  if(!current){ alert('먼저 [다음 랜덤]을 눌러 곡을 불러오세요'); return; }
-  const val = el('guess').value.trim();
-  const ok = isCorrect(val, current);
-
-  if (ok) {
-    score++; streak++; updateKPI();
-    setStatus('정답! 다음 곡으로 넘어가세요');
-    // ⛔ 재생/볼륨 관련 로직 제거 (unMute/setVolume/playVideo 등)
-  } else {
-    miss++; streak = 0; updateKPI();
-    setStatus('아쉬워요! 힌트를 보거나 다시 시도해보세요');
-    // ⛔ 오답 피드백용 1초 재생도 제거 (seekTo/play/pause 등)
+  // 힌트/정답(오른쪽 카드)
+  function giveHint(){
+    if(!current){ alert('먼저 곡을 불러오세요'); return; }
+    const rawTitle = current.title || '';
+    const title = rawTitle.replace(/\[[^\]]*\]|\([^)]*\)/g,'').trim();
+    const author = current.author || '-';
+    if(!title){
+      const kw = (current.keywords||[]).slice(0,3).join(', ') || '(키워드 없음)';
+      setStatus('힌트를 오른쪽에서 확인하세요'); el('hintBox').textContent = `채널: ${author} / 키워드 힌트: ${kw}`; setHintPanel(kw); return;
     }
+    const words = title.split(/\s+/).filter(Boolean);
+    const firstLetters = words.map(w => w[0] || '').join(' ');
+    const masked = words.map(w => (w.length <= 1 ? w : (w[0] + '•'.repeat(w.length-1)))).join(' ');
+    setStatus('힌트를 오른쪽에서 확인하세요');
+    el('hintBox').textContent = `채널: ${author}\n제목 힌트: [${firstLetters}] · ${masked}`;
+    setHintPanel(`[${firstLetters}] · ${masked}`);
+  }
+  function reveal(){
+    if(!current){ alert('먼저 곡을 불러오세요'); return; }
+    const title  = (current.title  || '').trim() || '(제목 없음)';
+    const author = (current.author || '').trim() || '(채널 없음)';
+    setStatus('정답을 오른쪽에서 확인하세요'); el('answerBox').textContent = `정답: ${title} — ${author}`; setHintPanel('정답 공개됨');
   }
 
-async function giveHint(){
-  if(!current){ alert('먼저 곡을 불러오세요'); return; }
-
-  // 제목/채널이 비어있을 수 있으니 보강
-  await hydrateCurrentMeta();
-
-  const rawTitle = current.title || '';
-  const title = rawTitle.replace(/\[[^\]]*\]|\([^)]*\)/g,'').trim(); // [공식 MV], (가사) 등 제거
-  const author = current.author || '-';
-
-  // 제목이 여전히 없으면 키워드로 폴백
-  if(!title){
-    const kw = (current.keywords||[]).slice(0,3).join(', ') || '(키워드 없음)';
-    el('status').innerHTML = `<span class="hint">채널: ${author} / 키워드 힌트: ${kw}</span>`;
-    return;
+  // 플레이어 크기
+  function applyPlayerSize(){
+    const f = document.getElementById('frame'); if(!f) return;
+    f.classList.remove('small','tiny','hidden'); const v = el('playerSize').value; if(v!=='normal') f.classList.add(v);
   }
 
-  // 단어별 첫 글자 + 마스킹 힌트
-  const words = title.split(/\s+/).filter(Boolean);
-  const firstLetters = words.map(w => w[0] || '').join(' ');
-  const masked = words.map(w => (w.length <= 1 ? w : (w[0] + '•'.repeat(w.length-1)))).join(' ');
-
-  const msg = `채널: ${author} / 제목 힌트: [${firstLetters}] · ${masked}`;
-  el('status').innerHTML = `<span class="hint">${msg}</span>`;
-}
-
-  // ===== 플레이리스트 로더(선택, API 키 필요) =====
-  async function loadPlaylist(apiKey, playlistId){
-    if(!apiKey || !playlistId){ alert('API 키와 플레이리스트 ID를 입력하세요'); return; }
-    const base = 'https://www.googleapis.com/youtube/v3/playlistItems';
-    let pageToken=''; const rows=[];
-    try{
-      for(let page=0; page<5; page++){ // 최대 5페이지(최대 250곡)
-        const url = new URL(base);
-        url.searchParams.set('key', apiKey);
-        url.searchParams.set('playlistId', playlistId);
-        url.searchParams.set('part', 'snippet,contentDetails');
-        url.searchParams.set('maxResults', '50');
-        if(pageToken) url.searchParams.set('pageToken', pageToken);
-        const res = await fetch(url.toString());
-        if(!res.ok){ throw new Error('API 오류: '+res.status); }
-        const data = await res.json();
-        for(const it of (data.items||[])){
-          const vid = it.contentDetails?.videoId; if(!vid) continue;
-          const title = it.snippet?.title || '';
-          const channel = it.snippet?.videoOwnerChannelTitle || it.snippet?.channelTitle || '';
-          const keys = normalize(`${title},${channel}`);
-          rows.push(`${vid} | ${keys}`);
-        }
-        pageToken = data.nextPageToken || '';
-        if(!pageToken) break;
-      }
-      if(rows.length===0){ alert('가져올 항목이 없습니다'); return; }
-      el('listBox').value = rows.join('\n');
-      setStatus(`${rows.length}곡을 불러왔습니다. [목록 적용]을 누르세요`);
-    }catch(err){ console.error(err); alert('불러오기 실패: '+err.message); }
-  }
-
-  // ===== 이벤트 바인딩 =====
+  // 이벤트 바인딩
   window.addEventListener('DOMContentLoaded',()=>{
-    // 기본 예시: 'kpop' 키워드 프리필
-    el('listBox').value = 'kpop';
+    el('listBox').value = 'kpop\nj-pop';
 
-    // API 키 프리필 및 저장
-    try{
-      const savedKey = localStorage.getItem('yt_api_key');
-      if(el('apiKey')){
-        el('apiKey').value = savedKey || DEFAULT_API_KEY || '';
-        el('apiKey').addEventListener('input', (e)=> localStorage.setItem('yt_api_key', e.target.value.trim()));
-      }
-    }catch{}
-
-    el('btnLoadList').addEventListener('click', ()=>{ applyList(); });
+    el('btnLoadList').addEventListener('click', applyList);
     el('btnFromKeywords').addEventListener('click', ()=>{ convertKeywordsToVideoRows(true); });
-    el('btnClear').addEventListener('click', ()=>{ el('listBox').value=''; videos=[]; setStatus('초기화됨'); });
-
-    el('btnLoadPlaylist').addEventListener('click', ()=>{
-      loadPlaylist(el('apiKey').value.trim(), el('playlistId').value.trim());
+    el('btnClear').addEventListener('click', ()=>{
+      el('listBox').value=''; videos=[]; setStatus('초기화됨'); setHintPanel('-');
+      el('hintBox').textContent='여기에 힌트가 표시됩니다.'; el('answerBox').textContent='정답을 보려면 [정답 보기]를 누르세요.';
     });
 
     el('btnNext').addEventListener('click', nextRandom);
     el('btnPlay').addEventListener('click', ()=>{ allowSound=true; playSnippet(); });
     el('btnPause').addEventListener('click', ()=>{ clearTimeout(snippetTimer); try{ player.pauseVideo(); }catch{} setStatus('멈춤'); });
+
     el('btnHint').addEventListener('click', giveHint);
     el('btnReveal').addEventListener('click', reveal);
 
     el('btnCheck').addEventListener('click', checkAnswer);
     el('guess').addEventListener('keydown', (e)=>{ if(e.key==='Enter') checkAnswer(); });
+
     el('len').addEventListener('input', ()=>{ clip.len = Number(el('len').value)||10; setClipWindow(); });
 
-    // ===== 간단 테스트 (콘솔) =====
-    (function runSimpleTests(){
-      const assert = (cond, msg)=>{ if(!cond){ console.error('TEST FAIL:', msg); throw new Error(msg);} };
-      // normalize
-      assert(normalize('  강남스타일!!!  ')==='강남스타일', 'normalize 한글/기호 제거 실패');
-      // parseList with id
-      const L = parseList('dQw4w9WgXcQ | rick,astley');
-      assert(L.length===1 && L[0].id==='dQw4w9WgXcQ' && L[0].keywords.length===2, 'parseList 기본 실패');
-      // parseList with URL
-      const U = parseList('https://www.youtube.com/watch?v=9bZkp7q19f0 | psy');
-      assert(U.length===1 && U[0].id==='9bZkp7q19f0', 'URL에서 ID 추출 실패');
-      // extractKeywordLines
-      const K = extractKeywordLines('k-pop\nhttps://www.youtube.com/watch?v=abc11111111\n재즈 piano');
-      assert(K.length===2 && K[0]==='k-pop' && K[1]==='재즈 piano', 'extractKeywordLines 실패');
-      console.log('%cAll tests passed','color:#10b981');
+    el('playerSize').addEventListener('change', applyPlayerSize);
+    applyPlayerSize();
+
+    el('perKeyword').addEventListener('change', ()=>{
+      const per = clamp(Number(el('perKeyword').value)||1, 1, 10);
+      setStatus(`키당 결과를 ${per}개로 설정했습니다. [목록 적용] 또는 [키워드 → 영상 찾기]를 눌러 반영하세요.`);
+    });
+
+    // 간단 테스트
+    (function(){ const assert=(c,m)=>{if(!c){console.error('TEST FAIL:',m);throw new Error(m)}}; 
+      assert(normalize('  강남스타일!!!  ')==='강남스타일','normalize 실패'); 
+      const L=parseList('dQw4w9WgXcQ | rick,astley'); assert(L.length===1&&L[0].id==='dQw4w9WgXcQ','parseList 실패'); 
+      const U=parseList('https://www.youtube.com/watch?v=9bZkp7q19f0 | psy'); assert(U.length===1 && U[0].id==='9bZkp7q19f0','URL→ID 추출 실패'); 
     })();
   });
 </script>
