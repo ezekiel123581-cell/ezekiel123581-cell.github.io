@@ -368,18 +368,20 @@
 
   <!-- 2) 카드/카테고리 -->
   <script>
-    var items = [
-      { title:'GitHub', desc:'소스와 저장소', href:'https://github.com/ezekiel123581-cell', cat:'기타',  thumb:'./thumb/img%205.JPG' },
-      { title:'시각예술시뮬레이터', desc:'시각 실험 데모', href:'./simulator.html', cat:'그림', thumb:'./thumb/img%203.JPG' },
-      { title:'GPT · 지구 칵테일', desc:'나만의 GPT – 지구 칵테일', href:'https://chatgpt.com/g/g-68b834ee2d4c8191b9ce84960a9aeda8-jigu-kagteil', cat:'기타', thumb:'./thumb/img%202.JPG' },
-      { title:'GPT · 요리 레시피를 알려주는 쥐', desc:'나만의 GPT – 요리 도우미', href:'https://chatgpt.com/g/g-68b81a61f75c8191a19abbbe0d553797-yoriresipireul-alryeojuneun-jwi', cat:'기타', thumb:'./thumb/img%201.JPG' }
-      /* ★ 추가: 랜덤 노래 맞추기 (game.html이 repo 루트에 있으므로 ./game.html 로 연결) */
-      { title:'게임 · 랜덤 노래 맞추기', desc:'YouTube 스니펫 퀴즈', href:'./game.html',  cat:'게임', thumb:'./thumb/img%208.JPG' },
-      { title:'게임 · 한자 급수 게임', desc:'한자 급수 게임', href:'./HanJA.html', cat:'게임',thumb:'./thumb/img%207.JPG' },
-      { title:'피아노', desc:'피아노 시뮬레이터', href:'./piano.html', cat:'게임', thumb:'./thumb/img%206.JPG' },
-      { title:'드로잉 · Grim', desc:'캔버스 드로잉 데모', href:'./Grim.html', cat:'그림', thumb:'./thumb/img%204.JPG' }
-      { title:'벚꽃 시계', desc:'타이머와 일정', href:'./sakura.html', cat:'기타',  thumb:'./thumb/img%209.JPG' }
-    ];
+   <script>
+  var items = [
+    { title:'GitHub', desc:'소스와 저장소', href:'https://github.com/ezekiel123581-cell', cat:'기타',  thumb:'./thumb/img%205.JPG' },
+    { title:'시각예술시뮬레이터', desc:'시각 실험 데모', href:'./simulator.html', cat:'그림', thumb:'./thumb/img%203.JPG' },
+    { title:'GPT · 지구 칵테일', desc:'나만의 GPT – 지구 칵테일', href:'https://chatgpt.com/g/g-68b834ee2d4c8191b9ce84960a9aeda8-jigu-kagteil', cat:'기타', thumb:'./thumb/img%202.JPG' },
+    { title:'GPT · 요리 레시피를 알려주는 쥐', desc:'나만의 GPT – 요리 도우미', href:'https://chatgpt.com/g/g-68b81a61f75c8191a19abbbe0d553797-yoriresipireul-alryeojuneun-jwi', cat:'기타', thumb:'./thumb/img%201.JPG' },  <!-- ← 쉼표 추가 -->
+
+    /* ★ 추가: 랜덤 노래 맞추기 (game.html이 repo 루트에 있으므로 ./game.html 로 연결) */
+    { title:'게임 · 랜덤 노래 맞추기', desc:'YouTube 스니펫 퀴즈', href:'./game.html',  cat:'게임', thumb:'./thumb/img%208.JPG' },
+    { title:'게임 · 한자 급수 게임', desc:'한자 급수 게임', href:'./HanJA.html', cat:'게임',thumb:'./thumb/img%207.JPG' },
+    { title:'피아노', desc:'피아노 시뮬레이터', href:'./piano.html', cat:'게임', thumb:'./thumb/img%206.JPG' },
+    { title:'드로잉 · Grim', desc:'캔버스 드로잉 데모', href:'./Grim.html', cat:'그림', thumb:'./thumb/img%204.JPG' },  <!-- ← 쉼표 추가 -->
+    { title:'벚꽃 시계', desc:'타이머와 일정', href:'./sakura.html', cat:'기타',  thumb:'./thumb/img%209.JPG' }
+  ];
 
     var grid  = document.getElementById('grid');
     var titleEl = document.getElementById('ws-title');
