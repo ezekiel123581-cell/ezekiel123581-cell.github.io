@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>벚꽃 시계 · 드래그 배치 & 정밀 숫자</title>
+<style>
+  :root{
+    --bg1:#fff0f5; --bg2:#ffeaf3; --ink:#1f2937;
+    --accent:#e38ab6; --accent2:#f7b5d0;
+    --glass:rgba(255,255,255,.78);
+    --shadow:0 10px 30px rgba(0,0,0,.08);
+    --petal-play: running;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--ink);
+    font:16px/1.6 system-ui,Segoe UI,Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    background:
+      radial-gradient(1200px 800px at 50% -10%, var(--bg2), transparent 60%),
+      linear-gradient(180deg, var(--bg1), #fff 80%);
+    overflow:hidden;
+  }
+
+  /* ===== 가운데 시계 ===== */
+  .center{
+    position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+    display:grid; place-items:center;
+  }
+  .clock{
+    position:relative; width:min(70vmin, 520px); aspect-ratio:1/1; border-radius:50%;
+    background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.96), rgba(255,255,255,.86));
+    border:2px solid rgba(0,0,0,.08);
+    box-shadow:0 2px 14px rgba(0,0,0,.06), inset 0 0 0 6px rgba(255,255,255,.72);
+    overflow:visible; /* 숫자 바깥 배치 여유 */
+  }
+
+  /* 숫자: 각자 실측 반경(px)으로 ‘정밀’ 외곽 배치 */
+  .nums{ position:absolute; inset:-16%; pointer-events:none; }
+  .num{
+    position:absolute; left:50%; top:50%;
+    transform: rotate(var(--a,0deg)) translateY(calc(-1 * var(--r, 0px))) rotate(calc(-1 * var(--a,0deg)));
+    transform-origin:center; font-weight:700; color:#374151; user-select:none;
+    text-shadow:0 1px 0 rgba(255,255,255,.9);
+  }
+  .num[data-n="12"]{--a:  0deg} .num[data-n="1"] {--a: 30deg}
+  .num[data-n="2"] {--a: 60deg} .num[data-n="3"] {--a: 90deg}
+  .num[data-n="4"] {--a:120deg} .num[data-n="5"] {--a:150deg}
+  .num[data-n="6"] {--a:180deg} .num[data-n="7"] {--a:210deg}
+  .num[data-n="8"] {--a:240deg} .num[data-n="9"] {--a:270deg}
+  .num[data-n="10"]{--a:300deg} .num[data-n="11"]{--a:330deg}
+
+  /* 바늘 */
+  .hand{ position:absolute; left:50%; top:50%; transform-origin:50% 85%; transform:translate(-50%,-85%) rotate(0deg) }
+  .hand.hour   { width:12px; height:30% }
+  .hand.minute { width:9px;  height:40% }
+  .hand.second { width:4px;  height:44% }
+  .hand.hour::before{
+    content:""; position:absolute; left:50%; bottom:10%; transform:translateX(-50%);
+    width:8px; height:75%; border-radius:6px; background:linear-gradient(#9aa3b2,#4b5563);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.9);
+  }
+  .hand.minute::before{
+    content:""; position:absolute; left:50%; bottom:10%; transform:translateX(-50%);
+    width:6px; height:80%; border-radius:6px; background:linear-gradient(#c7ccd4,#6b7280);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.9);
+  }
+  .hand.second::before{
+    content:""; position:absolute; left:50%; bottom:10%; transform:translateX(-50%);
+    width:2px; height:85%; border-radius:2px; background:#ef4444;
+    box-shadow:0 0 0 1px rgba(255,255,255,.6) inset;
+  }
+  .cap{
+    position:absolute; left:50%; top:50%; width:18px; height:18px; border-radius:50%;
+    transform:translate(-50%,-50%); background:#fff;
+    box-shadow:inset 0 0 0 2px #e38ab6, 0 2px 8px rgba(0,0,0,.08);
+  }
+  .panel{
+    position:absolute; left:50%; bottom:7%; transform:translateX(-50%);
+    background:var(--glass); backdrop-filter:saturate(120%) blur(6px);
+    border:1px solid rgba(0,0,0,.06); border-radius:12px; padding:7px 12px;
+    font-variant-numeric:tabular-nums; box-shadow:var(--shadow); text-align:center;
+  }
+  .panel small{ display:block; font-size:12px; opacity:.8 }
+
+  /* ===== 드래그 가능한 카드(타이머/일정) ===== */
+  .drag{
+    position:fixed; z-index:3; min-width:260px; max-width:min(420px, 92vw);
+    backdrop-filter:saturate(120%) blur(8px);
+  }
+  .drag .handle{
+    cursor:move; user-select:none;
+    background:#00000014; color:#111827; font-size:12px; padding:6px 10px; border-radius:12px 12px 0 0;
+    border:1px solid #0000001a; border-bottom:0;
+  }
+  .card{
+    background:var(--glass); border:1px solid #00000014; border-radius:0 0 12px 12px; box-shadow:var(--shadow);
+    padding:12px;
+  }
+  .card h2{ margin:0 4px 8px; font-size:17px; display:flex; align-items:center; gap:8px }
+  .btn{ padding:7px 10px; border-radius:10px; border:0; cursor:pointer; font-weight:600; font-size:14px; }
+  .primary{ background:#e38ab6; color:#fff } .ghost{ background:#0000000d }
+
+  /* 타이머 작은 UI */
+  .timer-top{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 4px 8px }
+  .timer-top input[type="number"]{ width:72px; padding:6px 8px; border-radius:10px; border:1px solid #0000001a; background:#fff; font-size:14px; }
+  .timer-presets{ display:flex; gap:6px; flex-wrap:wrap }
+  .timer-display{
+    font-variant-numeric:tabular-nums; font-size:30px; text-align:center; margin:8px 4px;
+    padding:6px 10px; border-radius:12px; background:#ffffffcc; border:1px solid #00000012;
+  }
+  .timer-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin:4px 0 2px }
+  .muted{ opacity:.85; font-size:12px }
+
+  /* 일정 조금 작게 */
+  .form{ display:flex; gap:8px; flex-wrap:wrap; margin:0 4px 6px }
+  .form input[type="time"]{ padding:6px 8px; border-radius:10px; border:1px solid rgba(0,0,0,.08); background:#fff; font-size:14px }
+  .form input[type="text"]{ flex:1 1 220px; padding:6px 8px; border-radius:10px; border:1px solid rgba(0,0,0,.08); background:#fff; font-size:14px }
+  .list{ list-style:none; margin:0; padding:4px; max-height:40vh; overflow:auto }
+  .item{ display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:10px; font-size:14px }
+  .item + .item{ margin-top:6px; }
+  .time{ font-weight:700; width:64px }
+  .txt{ flex:1 }
+  .del{ border:0; background:#0000000d; padding:6px 10px; border-radius:8px; cursor:pointer }
+  .done .txt{ text-decoration:line-through; opacity:.6 }
+
+  /* ===== 벚꽃(끊김 없는 흩날림) ===== */
+  .petal-layer{position:fixed; inset:-10vh 0 0 0; pointer-events:none; z-index:0; --petal-play:running;}
+  .petal{
+    position:absolute; top:-10vh; will-change:transform,opacity; opacity:.95;
+    filter:drop-shadow(0 2px 2px rgba(0,0,0,.08));
+    animation:fall var(--fall,14s) linear infinite; animation-play-state:var(--petal-play);
+    transform:translate3d(var(--x,0px), -10vh, 0) rotate(var(--rotStart,0deg));
+  }
+  .petal>.i{
+    position:absolute; inset:0; will-change:transform;
+    animation: sway var(--sway,6s) ease-in-out infinite; animation-play-state:var(--petal-play);
+  }
+  .petal>.i::before{
+    content:""; display:block; width:var(--w,18px); height:var(--h,22px);
+    background:
+      radial-gradient(35% 35% at 35% 35%, #fff 0 45%, transparent 50%),
+      radial-gradient(35% 35% at 65% 35%, #fff 0 45%, transparent 50%),
+      radial-gradient(70% 70% at 50% 60%, var(--accent2) 0, var(--accent) 60%);
+    border-radius:70% 70% 80% 80%/80% 80% 90% 90%;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.6);
+    transform:rotate(var(--r,-15deg)) scale(var(--z,1));
+    animation: twirl var(--twirl,5.4s) ease-in-out infinite;
+    animation-play-state: var(--petal-play);
+  }
+  @keyframes fall{
+    0%{   transform:translate3d(var(--x), -12vh, 0) rotate(var(--rotStart)); opacity:0 }
+    7%{   opacity:.95 }
+    100%{ transform:translate3d(calc(var(--x) + var(--wind,0px) + var(--gust,0px)), 105vh, 0) rotate(var(--rotEnd)); opacity:0 }
+  }
+  /* 좌우+미세 상하 흔들림(끊김 없이 순환) */
+  @keyframes sway{
+    0%,100%{ transform: translate(var(--sx,0px), 0) }
+    25%    { transform: translate(calc(var(--amp,20px)* .5), 2px) }
+    50%    { transform: translate(calc(var(--amp,20px)*-1), 4px) }
+    75%    { transform: translate(calc(var(--amp,20px)* .6), 1px) }
+  }
+  /* 뒤집힘/회전 트윌 */
+  @keyframes twirl{
+    0%,100%{ transform: rotate(var(--r,-15deg)) scale(var(--z,1)) }
+    25%    { transform: rotate(calc(var(--r,-15deg) + var(--tw1, -12deg))) scale(var(--z,1)) skewX(2deg) }
+    50%    { transform: rotate(calc(var(--r,-15deg) + var(--tw2, 10deg)))  scaleX(.92) }
+    75%    { transform: rotate(calc(var(--r,-15deg) + var(--tw3, -8deg)))  scaleY(.96) }
+  }
+  @media (prefers-reduced-motion: reduce){ .petal, .petal>.i, .petal>.i::before{animation:none !important} }
+</style>
+</head>
+<body>
+  <!-- 벚꽃 -->
+  <div class="petal-layer" id="petals" aria-hidden="true"></div>
+
+  <!-- 가운데 시계 -->
+  <section class="center">
+    <div class="clock" id="clock" aria-label="아날로그 시계">
+      <div class="nums" aria-hidden="true">
+        <div class="num" data-n="12">12</div>
+        <div class="num" data-n="1">1</div><div class="num" data-n="2">2</div>
+        <div class="num" data-n="3">3</div><div class="num" data-n="4">4</div>
+        <div class="num" data-n="5">5</div><div class="num" data-n="6">6</div>
+        <div class="num" data-n="7">7</div><div class="num" data-n="8">8</div>
+        <div class="num" data-n="9">9</div><div class="num" data-n="10">10</div>
+        <div class="num" data-n="11">11</div>
+      </div>
+
+      <div class="hand hour"   id="h"></div>
+      <div class="hand minute" id="m"></div>
+      <div class="hand second" id="s"></div>
+      <div class="cap" aria-hidden="true"></div>
+
+      <div class="panel">
+        <span id="time">--:--:--</span>
+        <small id="date">----</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- 드래그 가능한 타이머 -->
+  <div class="drag" id="dragTimer" style="left:16px; top:110px;">
+    <div class="handle">⠿ 타이머 이동</div>
+    <div class="card" aria-label="타이머">
+      <h2>⏲️ 타이머</h2>
+      <div class="timer-top">
+        <label>분 <input type="number" id="tMin" min="0" max="999" value="0"></label>
+        <label>초 <input type="number" id="tSec" min="0" max="59"  value="30"></label>
+        <button class="btn primary" id="tStart">시작</button>
+        <button class="btn ghost"   id="tPause">일시정지/재개</button>
+        <button class="btn ghost"   id="tReset">리셋</button>
+      </div>
+      <div class="timer-presets">
+        <button class="btn ghost" data-preset="60">+1분</button>
+        <button class="btn ghost" data-preset="180">+3분</button>
+        <button class="btn ghost" data-preset="300">+5분</button>
+        <button class="btn ghost" data-preset="600">+10분</button>
+        <button class="btn ghost" id="tClear">초기화</button>
+      </div>
+      <div class="timer-display" id="tDisplay">00:30.0</div>
+      <div class="timer-actions">
+        <button class="btn ghost" id="tBeep">🔔 테스트음</button>
+        <span class="muted">완료 시 소리 & 제목 깜빡임</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 드래그 가능한 일정 -->
+  <div class="drag" id="dragPlan" style="right:16px; top:110px; left:auto;">
+    <div class="handle">⠿ 일정 이동</div>
+    <div class="card" aria-label="일정">
+      <h2>🗓️ 오늘 일정</h2>
+      <form class="form" id="planForm">
+        <input type="time" id="planTime" required />
+        <input type="text" id="planText" placeholder="내용을 적고 Enter 또는 추가" required />
+        <button class="btn primary" type="submit">추가</button>
+        <button class="btn ghost" id="planClear" type="button" title="모두 삭제">모두 삭제</button>
+      </form>
+      <ul class="list" id="planList"></ul>
+      <div class="muted">체크하면 완료 처리, 데이터는 이 브라우저에 저장됩니다.</div>
+    </div>
+  </div>
+
+<script>
+'use strict';
+/* ========= 헬퍼 ========= */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const pad = n => String(n).padStart(2,'0');
+
+/* ========= 숫자: 테두리 ‘정밀’ 외곽 배치 =========
+   - 각 숫자 박스를 실측해서 원 경계(R) 밖으로 margin만큼 보장 */
+function placeNumbersOutsidePrecise(margin=6){
+  const clock = $('#clock');
+  const rect = clock.getBoundingClientRect();
+  const cx = rect.left + rect.width/2;
+  const cy = rect.top  + rect.height/2;
+  const R  = Math.min(rect.width, rect.height)/2;
+
+  // 1차 기본 반경(대략 밖으로)
+  const baseR = R + margin + 8;
+  $$('.num').forEach(el => el.style.setProperty('--r', baseR + 'px'));
+
+  // 2차: 각 숫자 실측 후 필요한 만큼 더 밀어냄
+  $$('.num').forEach(el=>{
+    const b = el.getBoundingClientRect();
+    const ex = b.left + b.width/2  - cx;   // 숫자 중심까지 벡터
+    const ey = b.top  + b.height/2 - cy;
+    const d  = Math.hypot(ex, ey) || 1;    // 중심거리(≈ 현재 반경)
+    const ux = ex / d, uy = ey / d;        // 방사방향 단위벡터
+    const hw = b.width/2, hh = b.height/2;
+
+    // 축정렬 사각형의 반경방향 투영 길이(내측 여유)
+    const proj = Math.abs(ux)*hw + Math.abs(uy)*hh;
+    const innerEdge = d - proj;
+    const need = (R + margin) - innerEdge; // 음수면 이미 밖
+
+    if (need > 0){
+      const newR = d + need;               // 필요한 만큼 더 밖으로
+      el.style.setProperty('--r', newR + 'px');
+    }
+  });
+}
+addEventListener('resize', ()=> requestAnimationFrame(placeNumbersOutsidePrecise));
+
+/* ========= 시계(rAF) ========= */
+const hEl = $('#h'), mEl = $('#m'), sEl = $('#s');
+const timeEl = $('#time'), dateEl = $('#date');
+const weekday = ['일','월','화','수','목','금','토'];
+
+let lastSec = -1;
+function tickClock(){
+  const now = new Date();
+  const H = now.getHours()%12;
+  const M = now.getMinutes();
+  const S = now.getSeconds();
+  const MS= now.getMilliseconds();
+
+  const secAngle  = (S + MS/1000) * 6;
+  const minAngle  = (M + (S + MS/1000)/60) * 6;
+  const hourAngle = (H + (M + S/60)/60) * 30;
+
+  hEl.style.transform = `translate(-50%,-85%) rotate(${hourAngle}deg)`;
+  mEl.style.transform = `translate(-50%,-85%) rotate(${minAngle}deg)`;
+  sEl.style.transform = `translate(-50%,-85%) rotate(${secAngle}deg)`;
+
+  if (S !== lastSec){
+    const h24 = now.getHours();
+    timeEl.textContent = `${pad(h24)}:${pad(M)}:${pad(S)}`;
+    dateEl.textContent = `${now.getFullYear()}.${pad(now.getMonth()+1)}.${pad(now.getDate())} (${weekday[now.getDay()]})`;
+    lastSec = S;
+  }
+  requestAnimationFrame(tickClock);
+}
+
+/* ========= 타이머 ========= */
+const tMin=$('#tMin'), tSec=$('#tSec'), tStart=$('#tStart'), tPause=$('#tPause'), tReset=$('#tReset'), tClear=$('#tClear'), tDisplay=$('#tDisplay'), tBeep=$('#tBeep');
+let timer = { baseMs:30_000, remainMs:30_000, running:false, lastTS:0, raf:0 };
+function fmtTimer(ms){ const s=Math.max(0,Math.floor(ms/1000)), mm=Math.floor(s/60), ss=s%60, t=Math.max(0,Math.floor((Math.max(0,ms)%1000)/100)); return `${pad(mm)}:${pad(ss)}.${t}`; }
+function updateFromInputs(){ const m=Math.max(0,Math.min(999,parseInt(tMin.value||'0',10))); const s=Math.max(0,Math.min(59,parseInt(tSec.value||'0',10))); timer.baseMs=timer.remainMs=(m*60+s)*1000; tDisplay.textContent=fmtTimer(timer.remainMs); }
+function lockInputs(x){ tMin.disabled=tSec.disabled=x; }
+function beep(times=3,freq=880,dur=140,gap=90){ const ctx=beep.ctx||(beep.ctx=new (window.AudioContext||window.webkitAudioContext)()); let t=ctx.currentTime; for(let i=0;i<times;i++){const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.value=freq; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.2,t+0.01); g.gain.linearRampToValueAtTime(0,t+dur/1000); o.start(t); o.stop(t+dur/1000+0.02); t+=(dur+gap)/1000;}}
+function flashTitle(on){ if(on){ let n=0; flashTitle._t=setInterval(()=>{document.title=(n++%2)?'⏲️ 종료!':'벚꽃 시계 · 드래그 배치';},500);}else{ clearInterval(flashTitle._t); document.title='벚꽃 시계 · 드래그 배치'; } }
+function stepTimer(ts){
+  if(!timer.running){ cancelAnimationFrame(timer.raf); return; }
+  if(!timer.lastTS) timer.lastTS=ts;
+  const dt=ts-timer.lastTS; timer.lastTS=ts; timer.remainMs-=dt;
+  tDisplay.textContent=fmtTimer(timer.remainMs);
+  if(timer.remainMs<=0){ timer.running=false; lockInputs(false); beep(4,980); flashTitle(true); setTimeout(()=>flashTitle(false),6000); return; }
+  timer.raf=requestAnimationFrame(stepTimer);
+}
+[tMin,tSec].forEach(el=>el.addEventListener('change',updateFromInputs));
+tStart.addEventListener('click',()=>{ updateFromInputs(); if(timer.baseMs<=0) return; if(!timer.running){ timer.running=true; timer.lastTS=0; lockInputs(true); flashTitle(false); timer.raf=requestAnimationFrame(stepTimer);} });
+tPause.addEventListener('click',()=>{ if(timer.running){ timer.running=false; lockInputs(false);} else if(timer.remainMs>0){ timer.running=true; timer.lastTS=0; lockInputs(true); timer.raf=requestAnimationFrame(stepTimer);} });
+tReset.addEventListener('click',()=>{ timer.running=false; timer.remainMs=timer.baseMs; lockInputs(false); flashTitle(false); tDisplay.textContent=fmtTimer(timer.remainMs); });
+tClear.addEventListener('click',()=>{ tMin.value=0; tSec.value=0; updateFromInputs(); });
+$$('.timer-presets .btn[data-preset]').forEach(b=>b.addEventListener('click',()=>{ const add=parseInt(b.dataset.preset,10); const cur=(parseInt(tMin.value||'0',10)*60 + parseInt(tSec.value||'0',10)) + add; tMin.value=Math.floor(cur/60); tSec.value=cur%60; updateFromInputs(); }));
+tBeep?.addEventListener('click',()=>beep());
+updateFromInputs();
+
+/* ========= 일정(localStorage) ========= */
+const planForm=$('#planForm'), planTime=$('#planTime'), planText=$('#planText'), planList=$('#planList'), planClear=$('#planClear');
+const PLAN_KEY='sakuraPlans.v4';
+function loadPlans(){ try{return JSON.parse(localStorage.getItem(PLAN_KEY)||'[]');}catch{return[];} }
+function savePlans(d){ localStorage.setItem(PLAN_KEY, JSON.stringify(d)); }
+function renderPlans(){ const data=loadPlans().sort((a,b)=>(a.time||'').localeCompare(b.time||'')); planList.innerHTML=''; for(const it of data){ const li=document.createElement('li'); li.className='item'+(it.done?' done':''); li.dataset.id=it.id; li.innerHTML=`<input type="checkbox" ${it.done?'checked':''} title="완료" />
+      <span class="time">${it.time||'--:--'}</span>
+      <span class="txt">${it.text||''}</span>
+      <button class="del" title="삭제">삭제</button>`; planList.appendChild(li);} }
+planForm.addEventListener('submit',e=>{ e.preventDefault(); const time=planTime.value, text=planText.value.trim(); if(!text) return; const d=loadPlans(); d.push({id:String(Date.now()+Math.random()),time,text,done:false}); savePlans(d); renderPlans(); planForm.reset(); });
+planList.addEventListener('click',e=>{ const li=e.target.closest('.item'); if(!li) return; const d=loadPlans(); const i=d.findIndex(x=>x.id===li.dataset.id); if(i<0) return; if(e.target.matches('input[type="checkbox"]')) d[i].done=!d[i].done; else if(e.target.matches('.del')) d.splice(i,1); savePlans(d); renderPlans(); });
+planClear.addEventListener('click',()=>{ if(confirm('모든 일정을 삭제할까요?')){ savePlans([]); renderPlans(); }});
+renderPlans();
+
+/* ========= 드래그 배치(타이머/일정) ========= */
+function makeDraggable(wrapper, key){
+  const handle = wrapper.querySelector('.handle');
+  const save = ()=>{ const r=wrapper.getBoundingClientRect(); const S={ l:r.left/innerWidth, t:r.top/innerHeight, w:r.width/innerWidth }; localStorage.setItem('sakura.pos.'+key, JSON.stringify(S)); };
+  const load = ()=>{ try{ const S=JSON.parse(localStorage.getItem('sakura.pos.'+key) || 'null'); if(!S) return;
+      const L=Math.max(0, Math.min(innerWidth - wrapper.offsetWidth, S.l*innerWidth));
+      const T=Math.max(0, Math.min(innerHeight - wrapper.offsetHeight, S.t*innerHeight));
+      wrapper.style.left = L + 'px';
+      wrapper.style.top  = T + 'px';
+      if(wrapper.id==='dragPlan'){ wrapper.style.right='auto'; } // 좌표계 일치
+  }catch{} };
+  let offX=0, offY=0;
+  handle.addEventListener('pointerdown',e=>{
+    e.preventDefault(); wrapper.setPointerCapture(e.pointerId);
+    const r=wrapper.getBoundingClientRect(); offX=e.clientX - r.left; offY=e.clientY - r.top;
+    const move = e2=>{
+      let x = e2.clientX - offX, y = e2.clientY - offY;
+      x = Math.max(0, Math.min(innerWidth  - wrapper.offsetWidth,  x));
+      y = Math.max(0, Math.min(innerHeight - wrapper.offsetHeight, y));
+      wrapper.style.left = x + 'px';
+      wrapper.style.top  = y + 'px';
+      wrapper.style.right='auto';
+    };
+    const up = e2=>{
+      wrapper.releasePointerCapture(e.pointerId);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      save();
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  });
+  window.addEventListener('resize', load);
+  load();
+}
+makeDraggable($('#dragTimer'), 'timer');
+makeDraggable($('#dragPlan'),  'plan');
+
+/* ========= 벚꽃(끊김 없는 흩날림) ========= */
+const petalLayer = document.getElementById('petals');
+const randf = (a,b)=>Math.random()*(b-a)+a;
+function petalsForDevice(base=140){
+  let k=1; if (matchMedia('(max-width:640px)').matches) k*=0.62; if (devicePixelRatio>=2) k*=0.9;
+  return Math.max(50, Math.round(base*k));
+}
+function seedPetals(n=petalsForDevice()){
+  petalLayer.innerHTML='';
+  const vw = Math.max(document.documentElement.clientWidth, innerWidth||0);
+  const frag = document.createDocumentFragment();
+  for(let i=0;i<n;i++){
+    const p=document.createElement('div'); p.className='petal';
+    const inner=document.createElement('div'); inner.className='i';
+    const size=randf(12,28), x=randf(-vw*0.25, vw*1.25), rot=randf(-40,40);
+
+    p.style.setProperty('--w', size+'px');
+    p.style.setProperty('--h', (size+randf(4,10))+'px');
+    p.style.setProperty('--x', x+'px');
+    p.style.setProperty('--rotStart', rot+'deg');
+    p.style.setProperty('--rotEnd', (rot+260)+'deg');
+
+    /* 기본 바람 + 스웨이 파라미터 */
+    p.style.setProperty('--wind', randf(-220,320)+'px');
+    p.style.setProperty('--fall', randf(11,22)+'s');
+    p.style.setProperty('--sway', randf(3.2,8.5)+'s');
+    p.style.setProperty('--amp', randf(22,56)+'px');
+    p.style.setProperty('--sx', randf(-6,6)+'px');
+    p.style.setProperty('--gust', '0px');
+    const depth = randf(0.75,1.25);
+    p.style.setProperty('--z', depth);
+    p.style.opacity = String(Math.min(1, 0.55 + depth*0.5));
+
+    /* 트윌(뒤집힘) */
+    p.style.setProperty('--twirl', randf(4.8,6.6)+'s');
+    p.style.setProperty('--tw1', (randf(-16,-8))+'deg');
+    p.style.setProperty('--tw2', (randf(8,14))+'deg');
+    p.style.setProperty('--tw3', (randf(-12,-6))+'deg');
+
+    /* 음수 딜레이 분산 → 화면에 항상 잎이 존재 */
+    const delay = (-randf(0,20))+'s';
+    p.style.animationDelay = delay;
+    inner.style.animationDelay = `calc(${delay} / 2)`;
+
+    p.appendChild(inner); frag.appendChild(p);
+  }
+  petalLayer.appendChild(frag);
+}
+
+/* 돌풍을 ‘부드럽게’ 보간해서 멈칫 제거 */
+function lerp(a,b,t){ return a + (b-a)*t; }
+function smoothGustTo(el, target, dur=900){
+  const start = performance.now();
+  const from  = parseFloat(el.style.getPropertyValue('--gust')) || 0;
+  function anim(ts){
+    const t = Math.min(1, (ts - start)/dur);
+    el.style.setProperty('--gust', lerp(from, target, t).toFixed(1)+'px');
+    if(t<1) requestAnimationFrame(anim);
+  }
+  requestAnimationFrame(anim);
+}
+let gustTimer, burstTimer;
+function startGusts(){
+  clearInterval(gustTimer); clearInterval(burstTimer);
+  gustTimer = setInterval(()=>{
+    const petals=petalLayer.children;
+    for(let i=0;i<petals.length;i++){
+      if(Math.random()<0.34){
+        const target = randf(-160,220);
+        smoothGustTo(petals[i], target, randf(800,1200));
+        setTimeout(()=> smoothGustTo(petals[i], 0, randf(900,1200)), randf(700,1100));
+      }
+    }
+  }, randf(3000,4800));
+
+  /* 가끔 큰 버스트도 ‘보간’으로 */
+  burstTimer = setInterval(()=>{
+    const petals=petalLayer.children;
+    for(let i=0;i<petals.length;i++){
+      if(Math.random()<0.7){
+        const target = randf(-260,360);
+        smoothGustTo(petals[i], target, randf(700,1000));
+        setTimeout(()=> smoothGustTo(petals[i], 0, randf(900,1300)), randf(600,900));
+      }
+    }
+  }, randf(12000,18000));
+}
+let petalsOn = true;
+function setPetalPlay(run){ petalLayer.style.setProperty('--petal-play', run?'running':'paused'); }
+document.addEventListener('visibilitychange', ()=> setPetalPlay(!document.hidden && petalsOn) );
+addEventListener('keydown', e=>{ if(e.key.toLowerCase()==='p'){ petalsOn=!petalsOn; setPetalPlay(petalsOn); }});
+
+/* ========= 부트스트랩 ========= */
+requestAnimationFrame(tickClock);
+seedPetals(); startGusts(); setPetalPlay(true);
+
+/* 폰트/레이아웃 안정 후 숫자 정밀 배치(두 번) */
+requestAnimationFrame(()=>{ placeNumbersOutsidePrecise(); requestAnimationFrame(placeNumbersOutsidePrecise); });
+</script>
+</body>
+</html>
